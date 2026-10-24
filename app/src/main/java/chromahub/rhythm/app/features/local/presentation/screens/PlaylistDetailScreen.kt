@@ -198,6 +198,8 @@ enum class PlaylistSortOrder {
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+private const val MOST_PLAYED_PLAYLIST_ID = "3"
+
 @Composable
 fun PlaylistDetailScreen(
     playlist: Playlist,
@@ -316,6 +318,9 @@ fun PlaylistDetailScreen(
     val coroutineScope = rememberCoroutineScope()
     val allSongs by musicViewModel.filteredSongs.collectAsState()
     val favoriteSongs by musicViewModel.favoriteSongs.collectAsState()
+    val songPlayCounts by musicViewModel.songPlayCounts.collectAsState()
+    // Play counts are only meaningful for the local, dynamically generated "Most Played" playlist.
+    val showPlayCounts = !isStreamingPlaylist && playlist.id == MOST_PLAYED_PLAYLIST_ID
     var showSongPicker by remember { mutableStateOf(false) }
     val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
 
@@ -1798,6 +1803,7 @@ fun PlaylistDetailScreen(
 
                                     PlaylistSongItem(
                                         song = song,
+                                        playCount = if (showPlayCounts) songPlayCounts[song.id] ?: 0 else 0,
                                         onClick = {
                                             if (isMultiSelectMode) {
                                                 HapticUtils.performHapticFeedback(context, haptics, HapticType.LIGHT)
@@ -2433,6 +2439,7 @@ fun PlaylistDetailScreen(
 
                             PlaylistSongItem(
                                 song = song,
+                                playCount = if (showPlayCounts) songPlayCounts[song.id] ?: 0 else 0,
                                 onClick = {
                                     if (isMultiSelectMode) {
                                         HapticUtils.performHapticFeedback(context, haptics, HapticType.LIGHT)
@@ -2749,6 +2756,7 @@ private fun AnimateIn(
 fun PlaylistSongItem(
     song: Song,
     onClick: () -> Unit,
+    playCount: Int = 0,
     onRemove: ((String) -> Unit)? = null,
     currentSong: Song? = null,
     isPlaying: Boolean = false,
@@ -3017,14 +3025,34 @@ fun PlaylistSongItem(
                 }
             }
             
-            // Duration display (hide in reorder mode to make room for buttons)
-            if (song.duration > 0 && !isReorderMode) {
-                Text(
-                    text = formatDuration(song.duration, useHoursFormat),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = durationColor,
+            // Play count (Most Played only) + duration (hide in reorder mode to make room for buttons)
+            if (!isReorderMode && (song.duration > 0 || playCount > 0)) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.padding(end = 4.dp)
-                )
+                ) {
+                    if (playCount > 0) {
+                        Text(
+                            text = pluralStringResource(
+                                R.plurals.playlist_play_count,
+                                playCount,
+                                playCount
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = durationColor,
+                            maxLines = 1
+                        )
+                    }
+                    if (song.duration > 0) {
+                        Text(
+                            text = formatDuration(song.duration, useHoursFormat),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = durationColor,
+                            maxLines = 1
+                        )
+                    }
+                }
             }
             
             // Show reorder buttons, remove button, or 3-dot menu depending on mode
