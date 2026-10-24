@@ -733,7 +733,10 @@ fun LocalNavigation(
                         if (isPlaying) {
                             onPlayPause()
                         }
-                        viewModel.clearQueue()
+                        // Dismissing only hides the player and pauses playback; clearing the
+                        // queue here unexpectedly discarded the user's queue. Keep it
+                        // commented until a dedicated "stop and clear queue" action exists.
+                        // viewModel.clearQueue()
                     },
                     showMiniPlayer = showMiniPlayer,
                     showBottomNav = false,
@@ -837,7 +840,10 @@ fun LocalNavigation(
                     if (isPlaying) {
                         onPlayPause()
                     }
-                    viewModel.clearQueue()
+                    // Dismissing only hides the player and pauses playback; clearing the
+                    // queue here unexpectedly discarded the user's queue. Keep it
+                    // commented until a dedicated "stop and clear queue" action exists.
+                    // viewModel.clearQueue()
                 },
                 showMiniPlayer = showMiniPlayer,
                 showBottomNav = showBottomNav,

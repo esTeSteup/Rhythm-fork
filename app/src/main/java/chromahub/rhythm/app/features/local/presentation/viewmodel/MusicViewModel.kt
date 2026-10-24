@@ -990,9 +990,12 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     val audioSessionId: Int
         get() = mediaController?.audioSessionId ?: AudioEffect.ERROR_BAD_VALUE
     
-    // For tracking progress 
+    // For tracking progress
     private var progressUpdateJob: Job? = null
     private var playbackWatchdogJob: Job? = null
+
+    // Coalesces bursts of timeline events into a single queue sync
+    private var queueSyncJob: Job? = null
 
     // Selected song for adding to playlist
     private val _selectedSongForPlaylist = MutableStateFlow<Song?>(null)
@@ -4623,13 +4626,11 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
 
-                viewModelScope.launch {
-                    delay(75)
-                    syncQueueWithMediaController()
-                }
+                // Coalesce with the timeline events ExoPlayer emits while updating its shuffle order.
+                scheduleQueueSync()
             }
         }
-        
+
         override fun onRepeatModeChanged(repeatMode: Int) {
             Log.d(TAG, "Repeat mode changed: $repeatMode")
             _repeatMode.value = repeatMode
@@ -4646,7 +4647,9 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 return
             }
             if (appSettings.shuffleUsesExoplayer.value && mediaController?.shuffleModeEnabled == true) {
-                syncQueueWithMediaController()
+                // Bulk queue edits emit several timeline changes in a row (and each sync walks the
+                // whole queue plus library), so coalesce them into one delayed sync.
+                scheduleQueueSync()
             }
         }
     }
@@ -9380,11 +9383,19 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                     return
                 }
                 
-                // Remove all items except the currently playing one
-                // Remove in reverse order to maintain indices
-                for (i in (controller.mediaItemCount - 1) downTo 0) {
-                    if (i != keepIndex) {
-                        controller.removeMediaItem(i)
+                // Remove all items except the currently playing one in two range calls.
+                // Removing item-by-item is O(n²): every removeMediaItem call rebuilds the
+                // player's masking timeline (and the controller's masked copy), so clearing a
+                // library-sized queue can block the main thread until it exhausts the heap.
+                // Remove the tail first so the head range keeps its original indices.
+                val controllerCount = controller.mediaItemCount
+                if (controllerCount > 1) {
+                    val keepControllerIndex = keepIndex.coerceIn(0, controllerCount - 1)
+                    if (keepControllerIndex + 1 < controllerCount) {
+                        controller.removeMediaItems(keepControllerIndex + 1, controllerCount)
+                    }
+                    if (keepControllerIndex > 0) {
+                        controller.removeMediaItems(0, keepControllerIndex)
                     }
                 }
                 
@@ -9917,6 +9928,19 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * Schedules a queue sync, replacing any pending one. Bulk queue operations emit several
+     * timeline notifications in a row, and each sync walks the whole queue (plus the library
+     * when shuffle is enabled), so only the final state should be synced.
+     */
+    private fun scheduleQueueSync() {
+        queueSyncJob?.cancel()
+        queueSyncJob = viewModelScope.launch {
+            delay(75)
+            syncQueueWithMediaController()
+        }
+    }
+
+    /**
      * Force sync the queue state with MediaController
      * This is useful for debugging queue inconsistencies
      */
@@ -10018,14 +10042,15 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             if (count == 0) return@let
             
             Log.d(TAG, "Checking active queue for blacklisted or unwhitelisted songs. Total items: $count")
-            
-            // Remove items starting from the end of the queue to keep indices stable
-            for (i in count - 1 downTo 0) {
+
+            val songsById = _songs.value.associateBy { it.id }
+            val shouldRemove = BooleanArray(count)
+            for (i in 0 until count) {
                 val mediaItem = controller.getMediaItemAt(i)
                 val songId = mediaItem.mediaId
-                val song = _songs.value.find { it.id == songId }
+                val song = songsById[songId]
                 val songPath = song?.path ?: if (song?.uri?.scheme == "file") song.uri.path else getPathFromUriCached(song?.uri ?: android.net.Uri.EMPTY)
-                
+
                 var shouldInclude = true
                 if (useBlacklist && hasBlacklist) {
                     if (blacklistedIds.contains(songId)) {
@@ -10042,11 +10067,26 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                         shouldInclude = false
                     }
                 }
-                
-                if (!shouldInclude) {
-                    controller.removeMediaItem(i)
-                    Log.d(TAG, "Removed blacklisted/unwhitelisted song from active queue: $songId at index $i")
+
+                shouldRemove[i] = !shouldInclude
+            }
+
+            // Remove contiguous runs from the end of the queue so the remaining indices stay
+            // valid. One removeMediaItems call per run avoids the O(n²) timeline rebuilds (and
+            // OOM risk) of calling removeMediaItem for every excluded item.
+            var index = count - 1
+            while (index >= 0) {
+                if (!shouldRemove[index]) {
+                    index--
+                    continue
                 }
+                var start = index
+                while (start > 0 && shouldRemove[start - 1]) {
+                    start--
+                }
+                controller.removeMediaItems(start, index + 1)
+                Log.d(TAG, "Removed blacklisted/unwhitelisted songs from active queue at indices $start..$index")
+                index = start - 1
             }
             
             // Re-sync local representation
