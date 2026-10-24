@@ -6638,7 +6638,7 @@ class MusicRepository(context: Context) {
 
             Log.d(TAG, "Starting background genre detection for ${songsWithoutGenres.size} songs out of ${songs.size} total")
             val updatedSongs = mutableListOf<Song>()
-            val batchSize = 20 // Smaller batches keep the background pass from monopolizing the CPU
+            val batchSize = 50 // Process in smaller batches for better responsiveness
             var processedCount = 0
 
             songsWithoutGenres.chunked(batchSize).forEach { batch ->
@@ -6714,10 +6714,13 @@ class MusicRepository(context: Context) {
                 val batchDuration = batchEndTime - batchStartTime
                 Log.d(TAG, "Processed batch of ${batch.size} songs in ${batchDuration}ms")
 
-                // Yield control to allow other coroutines to run, then give the main
-                // thread a short breather between batches.
+                // Yield control to allow other coroutines to run
                 yield()
-                delay(30)
+
+                // Small delay between batches to prevent overwhelming the system
+                if (batchDuration < 100) { // If batch processed quickly, add a small delay
+                    delay(50)
+                }
             }
 
             val updatedMap = updatedSongs.associateBy { it.id }
@@ -6757,19 +6760,16 @@ class MusicRepository(context: Context) {
             return@withContext
         }
 
-        Log.d(TAG, "Starting parallel audio metadata extraction for ${songsWithoutMetadata.size} songs")
+        Log.d(TAG, "Starting fast parallel audio metadata extraction for ${songsWithoutMetadata.size} songs")
         val updatedSongs = mutableListOf<Song>()
-        // Keep the first-run scan from spawning 25 decoders at once. On a large library the
-        // resulting native allocations and GC can starve the main thread and trigger an ANR.
-        val batchSize = 8
-        val extractionDispatcher = Dispatchers.IO.limitedParallelism(4)
+        val batchSize = 25
         var processedCount = 0
 
         songsWithoutMetadata.chunked(batchSize).forEach { batch ->
             val batchStartTime = System.currentTimeMillis()
 
             val batchResults = batch.map { song ->
-                async(extractionDispatcher) {
+                async(Dispatchers.IO) {
                     try {
                         val formatInfo = AudioFormatDetector.detectFormat(context, song.uri, song)
                         song.copy(
@@ -6797,8 +6797,6 @@ class MusicRepository(context: Context) {
             val batchDuration = System.currentTimeMillis() - batchStartTime
             Log.d(TAG, "Processed and persisted metadata batch of ${batch.size} songs in ${batchDuration}ms")
             yield()
-            // Throttle the first-run pass so metadata decoding cannot starve the UI thread.
-            delay(40)
         }
 
         val updatedMap = updatedSongs.associateBy { it.id }
