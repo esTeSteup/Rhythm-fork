@@ -1919,19 +1919,47 @@ class MusicRepository(context: Context) {
      * Gets genre from MediaMetadataRetriever
      */
     private fun getGenreFromMediaMetadataRetriever(songUri: Uri): String? {
+        // MediaMetadataRetriever cannot open remote/non-local sources reliably, and
+        // setDataSource throws for missing files or unsupported containers. Those are
+        // expected during a library sweep, not actionable errors, so skip them quietly.
+        val scheme = songUri.scheme?.lowercase()
+        if (scheme != null && scheme !in setOf("content", "file", "android.resource")) {
+            Log.d(TAG, "Skipping genre metadata for non-local URI: $songUri")
+            return null
+        }
+        if (scheme == "file") {
+            val file = songUri.path?.let(::File)
+            if (file == null || !file.exists() || !file.canRead()) {
+                Log.d(TAG, "Skipping genre metadata for missing/unreadable file: $songUri")
+                return null
+            }
+        }
+        if (scheme == "content") {
+            val readable = try {
+                context.contentResolver.openAssetFileDescriptor(songUri, "r")?.use { true } ?: false
+            } catch (_: Exception) {
+                false
+            }
+            if (!readable) {
+                Log.d(TAG, "Skipping genre metadata for unreadable content URI: $songUri")
+                return null
+            }
+        }
+
         val retriever = android.media.MediaMetadataRetriever()
         return try {
             retriever.setDataSource(context, songUri)
             val genre = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_GENRE)
             genre?.trim()?.takeIf { it.isNotBlank() }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting genre from MediaMetadataRetriever", e)
+            // Unsupported codecs/containers are normal for a mixed local library.
+            Log.d(TAG, "Genre metadata unavailable for $songUri: ${e.message}")
             null
         } finally {
             try {
                 retriever.release()
             } catch (e: Exception) {
-                Log.e(TAG, "Error releasing MediaMetadataRetriever", e)
+                Log.d(TAG, "Failed to release MediaMetadataRetriever: ${e.message}")
             }
         }
     }
