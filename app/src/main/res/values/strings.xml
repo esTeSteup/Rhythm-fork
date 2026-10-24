@@ -1532,6 +1532,8 @@
     <string name="settings_thumb_rotate_desc">Slowly spins the thumb while music is playing</string>
     <string name="settings_artwork_rotate">Rotate Album Art While Playing</string>
     <string name="settings_artwork_rotate_desc">Slowly spins the album cover while music is playing</string>
+    <string name="settings_artwork_rotate_circular">Fixed Circular Vinyl/CD Frame</string>
+    <string name="settings_artwork_rotate_circular_desc">Keep the rotating artwork inside a fixed circle instead of the expressive shape</string>
 <string name="settings_display_mode">Display Mode</string>
     <string name="settings_theme_mode">Theme Mode</string>
     <string name="settings_theme_mode_desc">Choose your preferred theme</string>

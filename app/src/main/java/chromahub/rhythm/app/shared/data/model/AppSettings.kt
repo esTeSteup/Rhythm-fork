@@ -616,6 +616,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_PLAYER_SHOW_SONG_INFO_ON_ARTWORK = "player_show_song_info_on_artwork"
         private const val KEY_PLAYER_ARTWORK_CORNER_RADIUS = "player_artwork_corner_radius" // 0-40 dp
         private const val KEY_PLAYER_ARTWORK_ROTATE = "player_artwork_rotate" // Boolean
+        private const val KEY_PLAYER_ARTWORK_CIRCULAR_ROTATION = "player_artwork_circular_rotation" // Boolean
         private const val KEY_PLAYER_SHOW_AUDIO_QUALITY_BADGES = "player_show_audio_quality_badges"
         private const val KEY_EXPRESSIVE_QUALITY_BADGE_ALWAYS_VISIBLE = "expressive_quality_badge_always_visible"
         private const val KEY_PLAYER_PROGRESS_STYLE = "player_progress_style" // "NORMAL", "WAVY", "ROUNDED", "THIN", "THICK"
@@ -5833,6 +5834,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         _playerShowSongInfoOnArtwork.value = prefs.getBoolean(KEY_PLAYER_SHOW_SONG_INFO_ON_ARTWORK, true)
         _playerArtworkCornerRadius.value = prefs.getInt(KEY_PLAYER_ARTWORK_CORNER_RADIUS, 28)
         _playerArtworkRotate.value = prefs.getBoolean(KEY_PLAYER_ARTWORK_ROTATE, false)
+        _playerArtworkCircularRotation.value = prefs.getBoolean(KEY_PLAYER_ARTWORK_CIRCULAR_ROTATION, false)
         _playerShowAudioQualityBadges.value = prefs.getBoolean(KEY_PLAYER_SHOW_AUDIO_QUALITY_BADGES, true)
         _expressiveQualityBadgeAlwaysVisible.value = prefs.getBoolean(KEY_EXPRESSIVE_QUALITY_BADGE_ALWAYS_VISIBLE, false)
         
@@ -6450,6 +6452,14 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     fun setPlayerArtworkRotate(value: Boolean) {
         _playerArtworkRotate.value = value
         prefs.edit { putBoolean(KEY_PLAYER_ARTWORK_ROTATE, value) }
+    }
+
+    // Use a fixed circular frame (vinyl/CD style) for the rotating artwork
+    private val _playerArtworkCircularRotation = MutableStateFlow(prefs.getBoolean(KEY_PLAYER_ARTWORK_CIRCULAR_ROTATION, false))
+    val playerArtworkCircularRotation: StateFlow<Boolean> = _playerArtworkCircularRotation.asStateFlow()
+    fun setPlayerArtworkCircularRotation(value: Boolean) {
+        _playerArtworkCircularRotation.value = value
+        prefs.edit { putBoolean(KEY_PLAYER_ARTWORK_CIRCULAR_ROTATION, value) }
     }
     
     // ==================== MiniPlayer Customization Settings ====================

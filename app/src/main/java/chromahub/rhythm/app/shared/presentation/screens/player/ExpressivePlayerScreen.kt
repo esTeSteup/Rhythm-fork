@@ -325,6 +325,7 @@ fun ExpressivePlayerScreen(
     val playerProgressThumbStyle by appSettings.playerProgressThumbStyle.collectAsState()
     val playerProgressThumbRotate by appSettings.playerProgressThumbRotate.collectAsState()
     val playerArtworkRotate by appSettings.playerArtworkRotate.collectAsState()
+    val playerArtworkCircularRotation by appSettings.playerArtworkCircularRotation.collectAsState()
     val enhancedSeekingEnabled by appSettings.enhancedSeekingEnabled.collectAsState()
     val playerAmbientBackdropEnabled by appSettings.playerAmbientBackdropEnabled.collectAsState()
     val playerAmbientBackdropIntensity by appSettings.playerAmbientBackdropIntensity.collectAsState()
@@ -646,7 +647,8 @@ fun ExpressivePlayerScreen(
     val line6Alpha = line6Fraction
     val line6TranslationY = with(LocalDensity.current) { 48.dp.toPx() * (1f - line6Fraction) }
 
-    val artworkClipShape = playerArtworkShape
+    val useCircularVinyl = playerArtworkRotate && playerArtworkCircularRotation
+    val artworkClipShape = if (useCircularVinyl) CircleShape else playerArtworkShape
 
     val needsDarkSurfaces = showDarkBg
     val darkScheme = remember { darkColorScheme() }

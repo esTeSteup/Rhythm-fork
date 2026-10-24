@@ -355,6 +355,8 @@ fun MaterialPlayerScreen(
     val playerProgressThumbStyle by appSettingsInstance.playerProgressThumbStyle.collectAsState()
     val playerProgressThumbRotate by appSettingsInstance.playerProgressThumbRotate.collectAsState()
     val playerArtworkRotate by appSettingsInstance.playerArtworkRotate.collectAsState()
+    val playerArtworkCircularRotation by appSettingsInstance.playerArtworkCircularRotation.collectAsState()
+    val artworkClipShape = if (playerArtworkRotate && playerArtworkCircularRotation) CircleShape else playerArtworkShape
 
     // Enhanced seeking settings
     val enhancedSeekingEnabled by appSettingsInstance.enhancedSeekingEnabled.collectAsState()
@@ -1763,7 +1765,7 @@ fun MaterialPlayerScreen(
                                                 ShimmerBox(
                                                     modifier = Modifier
                                                         .fillMaxSize()
-                                                        .clip(playerArtworkShape)
+                                                        .clip(artworkClipShape)
                                                 )
                                             }
                                             
@@ -1779,7 +1781,7 @@ fun MaterialPlayerScreen(
                                                 onError = { imageLoaded = true },
                                                 modifier = Modifier
                                                     .fillMaxSize()
-                                                    .clip(playerArtworkShape)
+                                                    .clip(artworkClipShape)
                                                     .graphicsLayer { rotationZ = artworkRotation }
                                             )
 
@@ -1791,7 +1793,7 @@ fun MaterialPlayerScreen(
                                                     alwaysPlay = true,
                                                     modifier = Modifier
                                                         .fillMaxSize()
-                                                        .clip(playerArtworkShape)
+                                                        .clip(artworkClipShape)
                                                 )
                                             }
 
@@ -1831,7 +1833,7 @@ fun MaterialPlayerScreen(
                                                 Box(
                                                     modifier = Modifier
                                                         .fillMaxSize()
-                                                        .clip(playerArtworkShape)
+                                                        .clip(artworkClipShape)
                                                         .background(
                                                             Brush.verticalGradient(
                                                                 colors = listOf(
@@ -1850,7 +1852,7 @@ fun MaterialPlayerScreen(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .clip(playerArtworkShape)
+                                                .clip(artworkClipShape)
                                                 .background(
                                                     Brush.radialGradient(
                                                         colors = listOf(

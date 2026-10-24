@@ -185,6 +185,7 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
     val playerShowSongInfoOnArtwork by appSettings.playerShowSongInfoOnArtwork.collectAsState()
     val playerArtworkCornerRadius by appSettings.playerArtworkCornerRadius.collectAsState()
     val playerArtworkRotate by appSettings.playerArtworkRotate.collectAsState()
+    val playerArtworkCircularRotation by appSettings.playerArtworkCircularRotation.collectAsState()
     val playerShowAudioQualityBadges by appSettings.playerShowAudioQualityBadges.collectAsState()
     val expressiveQualityBadgeAlwaysVisible by appSettings.expressiveQualityBadgeAlwaysVisible.collectAsState()
     val expressiveShapesEnabled by appSettings.expressiveShapesEnabled.collectAsState()
@@ -589,6 +590,18 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                                 description = context.getString(R.string.settings_artwork_rotate_desc),
                                 toggleState = playerArtworkRotate,
                                 onToggleChange = { appSettings.setPlayerArtworkRotate(it) }
+                            )
+                        ),
+                        toMaterial3SettingsItem(
+                            context = context,
+                            hapticFeedback = haptics,
+                            item = SettingItem(
+                                icon = MaterialSymbolIcon("album"),
+                                title = context.getString(R.string.settings_artwork_rotate_circular),
+                                description = context.getString(R.string.settings_artwork_rotate_circular_desc),
+                                toggleState = playerArtworkCircularRotation,
+                                onToggleChange = { appSettings.setPlayerArtworkCircularRotation(it) },
+                                enabled = playerArtworkRotate
                             )
                         )
                     ),
