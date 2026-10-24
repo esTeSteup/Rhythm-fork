@@ -43,6 +43,7 @@ import chromahub.rhythm.app.activities.MainActivity
 import chromahub.rhythm.app.activities.RhythmGuardTimeoutActivity
 import chromahub.rhythm.app.shared.data.model.Album
 import chromahub.rhythm.app.shared.data.model.AppSettings
+import chromahub.rhythm.app.shared.domain.utils.PlayCountDeduplicator
 import chromahub.rhythm.app.shared.data.model.Artist
 import chromahub.rhythm.app.shared.data.model.LyricsSourcePreference
 import chromahub.rhythm.app.shared.data.model.MediaScanMode
@@ -1229,7 +1230,18 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     init {
         Log.d(TAG, "Initializing MusicViewModel")
         startLibrarySetupCompletionMonitor()
-        
+
+        // Several MusicViewModel instances can be alive at once (screens that call viewModel()).
+        // PlayCountDeduplicator ensures only one of them increments the counters, so every
+        // instance must observe the persisted map to keep its UI in sync.
+        viewModelScope.launch {
+            appSettings.songPlayCounts.collect { counts ->
+                if (_songPlayCounts.value != counts) {
+                    _songPlayCounts.value = counts
+                }
+            }
+        }
+
         // Single coroutine for main initialization to ensure proper ordering
         viewModelScope.launch {
             try {
@@ -5233,9 +5245,9 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             _isPlaying.value = true
             startProgressUpdates()
             
-            // Track song play for statistics
+            // Track song play for statistics (updateRecentlyPlayed also updates the counters,
+            // guarded against duplicate reports from other live ViewModel instances).
             updateRecentlyPlayed(song)
-            updateListeningStats(song)
         }
     }
 
@@ -5254,7 +5266,6 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         currentFetchingSongId = null
 
         updateRecentlyPlayed(song)
-        updateListeningStats(song)
         if (appSettings.colorSource.value == "ALBUM_ART") {
             extractColorsFromAlbumArt(song)
         }
@@ -5741,9 +5752,13 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 // Log the update
                 Log.d(TAG, "Updated recently played: ${currentList.size} songs, latest: ${song.title}")
                 
-                // Update various stats (but not playback time stats - those are tracked separately now)
-                updateDailyStats(song)
-                updateListeningStats(song)
+                // Update various stats (but not playback time stats - those are tracked separately now).
+                // Playback is observed by every live MusicViewModel instance, so only the first
+                // report for this play may update the counters.
+                if (PlayCountDeduplicator.tryAcquire(song.id)) {
+                    updateDailyStats(song)
+                    updateListeningStats(song)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating recently played", e)
             }
@@ -6043,7 +6058,6 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                             _isFavorite.value = _favoriteSongs.value.contains(targetSong.id)
 
                             updateRecentlyPlayed(targetSong)
-                            updateListeningStats(targetSong)
                             startProgressUpdates()
                             saveQueueToPersistence()
 
@@ -6198,9 +6212,8 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                         _isPlaying.value = true
                         
                         // Add starting song to recently played and track play
-                        startingSong?.let { 
+                        startingSong?.let {
                             updateRecentlyPlayed(it)
-                            updateListeningStats(it)
                         }
                         
                         // Update favorite status
@@ -9709,8 +9722,8 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 appSettings.setGenrePreferences(currentGenrePrefs)
             }
 
-            // Update song play counts
-            val currentSongPlayCounts = _songPlayCounts.value.toMutableMap()
+            // Update song play counts (AppSettings is the process-wide source of truth).
+            val currentSongPlayCounts = appSettings.songPlayCounts.value.toMutableMap()
             val playCount = currentSongPlayCounts.getOrDefault(song.id, 0) + 1
             currentSongPlayCounts[song.id] = playCount
             _songPlayCounts.value = currentSongPlayCounts
