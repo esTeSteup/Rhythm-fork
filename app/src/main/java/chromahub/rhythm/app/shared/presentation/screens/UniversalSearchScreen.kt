@@ -26,8 +26,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -107,6 +109,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import chromahub.rhythm.app.util.windowScreenWidthDp
@@ -213,6 +216,10 @@ fun UniversalSearchScreen(
     var selectedSongForInfo by remember { mutableStateOf<Song?>(null) }
     var isSongInfoStreaming by remember { mutableStateOf(false) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+
+    var isSelectionMode by remember { mutableStateOf(false) }
+    var selectedSongs by remember { mutableStateOf<Map<String, Song>>(emptyMap()) }
+    var showMultiAddToPlaylistSheet by remember { mutableStateOf(false) }
 
     var pendingMetadataEditCompleteCallback by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
 
@@ -332,6 +339,36 @@ fun UniversalSearchScreen(
             matchedLocalArtists.isNotEmpty() || matchedStreamingArtists.isNotEmpty() ||
             matchedLocalPlaylists.isNotEmpty() || matchedStreamingPlaylists.isNotEmpty()
 
+    val clearSelection = {
+        isSelectionMode = false
+        selectedSongs = emptyMap()
+    }
+
+    val toggleSelection: (String, Song) -> Unit = { key, song ->
+        val updated = if (selectedSongs.containsKey(key)) {
+            selectedSongs - key
+        } else {
+            selectedSongs + (key to song)
+        }
+        selectedSongs = updated
+        if (updated.isEmpty()) {
+            isSelectionMode = false
+        }
+    }
+
+    val enterSelection: (String, Song) -> Unit = { key, song ->
+        focusManager.clearFocus()
+        isSelectionMode = true
+        selectedSongs = selectedSongs + (key to song)
+    }
+
+    // A new query produces a new result set; partial selections would be ambiguous.
+    LaunchedEffect(query) {
+        if (isSelectionMode) {
+            clearSelection()
+        }
+    }
+
     val handleAction = { itemMode: String, action: () -> Unit ->
         if (itemMode == appMode) {
             action()
@@ -343,7 +380,9 @@ fun UniversalSearchScreen(
     }
 
     val handleBack = {
-        if (showAllSongsPage) {
+        if (isSelectionMode) {
+            clearSelection()
+        } else if (showAllSongsPage) {
             showAllSongsPage = false
         } else if (query.isNotEmpty() || showFilters) {
             query = ""
@@ -375,7 +414,8 @@ fun UniversalSearchScreen(
     val statusBarsTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navigationBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val searchBarHeightPadding = 88.dp + (if (showFilters) 48.dp else 0.dp)
-    val totalBottomPadding = searchBarHeightPadding + navigationBarsBottom + 16.dp
+    val totalBottomPadding = searchBarHeightPadding + navigationBarsBottom + 16.dp +
+        (if (isSelectionMode) 72.dp else 0.dp)
 
     Box(
         modifier = Modifier
@@ -745,16 +785,38 @@ fun UniversalSearchScreen(
                             } else {
                                 val allSongs = buildList {
                                     matchedLocalSongs.take(3).forEach { song ->
-                                        add(SongSearchItem("LOCAL", song.title, "${song.artist} • ${song.album}", song.artworkUri, song) {
-                                            if (query.isNotBlank()) localViewModel.addSearchQuery(query)
-                                            handleAction("LOCAL") { onLocalSongClick(song, matchedLocalSongs) }
-                                        })
+                                        add(
+                                            SongSearchItem(
+                                                mode = "LOCAL",
+                                                title = song.title,
+                                                subtitle = "${song.artist} • ${song.album}",
+                                                artworkUri = song.artworkUri,
+                                                originalSong = song,
+                                                selectionKey = searchSelectionKey("LOCAL", song.id),
+                                                selectionSong = song,
+                                                onClick = {
+                                                    if (query.isNotBlank()) localViewModel.addSearchQuery(query)
+                                                    handleAction("LOCAL") { onLocalSongClick(song, matchedLocalSongs) }
+                                                }
+                                            )
+                                        )
                                     }
                                     matchedStreamingSongs.take(3).forEach { song ->
-                                        add(SongSearchItem("STREAMING", song.title, "${song.artist} • ${song.album}", song.artworkUri, song) {
-                                            if (query.isNotBlank()) localViewModel.addSearchQuery(query)
-                                            handleAction("STREAMING") { onStreamingSongClick(song) }
-                                        })
+                                        add(
+                                            SongSearchItem(
+                                                mode = "STREAMING",
+                                                title = song.title,
+                                                subtitle = "${song.artist} • ${song.album}",
+                                                artworkUri = song.artworkUri,
+                                                originalSong = song,
+                                                selectionKey = searchSelectionKey("STREAMING", song.id),
+                                                selectionSong = song.toLocalSong(),
+                                                onClick = {
+                                                    if (query.isNotBlank()) localViewModel.addSearchQuery(query)
+                                                    handleAction("STREAMING") { onStreamingSongClick(song) }
+                                                }
+                                            )
+                                        )
                                     }
                                 }
 
@@ -782,7 +844,22 @@ fun UniversalSearchScreen(
                                                         subtitle = item.subtitle,
                                                         artworkUri = item.artworkUri,
                                                         mode = item.mode,
-                                                        onClick = item.onClick,
+                                                        onClick = {
+                                                            if (isSelectionMode) {
+                                                                toggleSelection(item.selectionKey, item.selectionSong)
+                                                            } else {
+                                                                item.onClick()
+                                                            }
+                                                        },
+                                                        onLongClick = {
+                                                            if (isSelectionMode) {
+                                                                toggleSelection(item.selectionKey, item.selectionSong)
+                                                            } else {
+                                                                enterSelection(item.selectionKey, item.selectionSong)
+                                                            }
+                                                        },
+                                                        isSelectionMode = isSelectionMode,
+                                                        isSelected = selectedSongs.containsKey(item.selectionKey),
                                                         onMoreClick = {
                                                             selectedSongForOptions = item.originalSong
                                                             showSongOptionsSheet = true
@@ -993,16 +1070,38 @@ fun UniversalSearchScreen(
                         } else {
                             val allSongs = buildList {
                                 matchedLocalSongs.take(3).forEach { song ->
-                                    add(SongSearchItem("LOCAL", song.title, "${song.artist} • ${song.album}", song.artworkUri, song) {
-                                        if (query.isNotBlank()) localViewModel.addSearchQuery(query)
-                                        handleAction("LOCAL") { onLocalSongClick(song, matchedLocalSongs) }
-                                    })
+                                    add(
+                                        SongSearchItem(
+                                            mode = "LOCAL",
+                                            title = song.title,
+                                            subtitle = "${song.artist} • ${song.album}",
+                                            artworkUri = song.artworkUri,
+                                            originalSong = song,
+                                            selectionKey = searchSelectionKey("LOCAL", song.id),
+                                            selectionSong = song,
+                                            onClick = {
+                                                if (query.isNotBlank()) localViewModel.addSearchQuery(query)
+                                                handleAction("LOCAL") { onLocalSongClick(song, matchedLocalSongs) }
+                                            }
+                                        )
+                                    )
                                 }
                                 matchedStreamingSongs.take(3).forEach { song ->
-                                    add(SongSearchItem("STREAMING", song.title, "${song.artist} • ${song.album}", song.artworkUri, song) {
-                                        if (query.isNotBlank()) localViewModel.addSearchQuery(query)
-                                        handleAction("STREAMING") { onStreamingSongClick(song) }
-                                    })
+                                    add(
+                                        SongSearchItem(
+                                            mode = "STREAMING",
+                                            title = song.title,
+                                            subtitle = "${song.artist} • ${song.album}",
+                                            artworkUri = song.artworkUri,
+                                            originalSong = song,
+                                            selectionKey = searchSelectionKey("STREAMING", song.id),
+                                            selectionSong = song.toLocalSong(),
+                                            onClick = {
+                                                if (query.isNotBlank()) localViewModel.addSearchQuery(query)
+                                                handleAction("STREAMING") { onStreamingSongClick(song) }
+                                            }
+                                        )
+                                    )
                                 }
                             }
 
@@ -1030,7 +1129,22 @@ fun UniversalSearchScreen(
                                                     subtitle = item.subtitle,
                                                     artworkUri = item.artworkUri,
                                                     mode = item.mode,
-                                                    onClick = item.onClick,
+                                                    onClick = {
+                                                        if (isSelectionMode) {
+                                                            toggleSelection(item.selectionKey, item.selectionSong)
+                                                        } else {
+                                                            item.onClick()
+                                                        }
+                                                    },
+                                                    onLongClick = {
+                                                        if (isSelectionMode) {
+                                                            toggleSelection(item.selectionKey, item.selectionSong)
+                                                        } else {
+                                                            enterSelection(item.selectionKey, item.selectionSong)
+                                                        }
+                                                    },
+                                                    isSelectionMode = isSelectionMode,
+                                                    isSelected = selectedSongs.containsKey(item.selectionKey),
                                                     onMoreClick = {
                                                         selectedSongForOptions = item.originalSong
                                                         showSongOptionsSheet = true
@@ -1484,14 +1598,40 @@ fun UniversalSearchScreen(
             UniversalAllSongsPage(
                 localSongs = matchedLocalSongs,
                 streamingSongs = matchedStreamingSongs,
-                onBack = { showAllSongsPage = false },
+                onBack = {
+                    if (isSelectionMode) {
+                        clearSelection()
+                    } else {
+                        showAllSongsPage = false
+                    }
+                },
                 onOptionsClick = { songObj ->
                     selectedSongForOptions = songObj
                     showSongOptionsSheet = true
                 },
                 onLocalSongClick = { song, songsList -> handleAction("LOCAL") { onLocalSongClick(song, songsList) } },
                 onStreamingSongClick = { song -> handleAction("STREAMING") { onStreamingSongClick(song) } },
-                haptics = haptics
+                haptics = haptics,
+                isSelectionMode = isSelectionMode,
+                selectedKeys = selectedSongs.keys,
+                onToggleSelection = toggleSelection,
+                onEnterSelection = enterSelection
+            )
+        }
+
+        if (isSelectionMode) {
+            SearchSelectionActionBar(
+                selectedCount = selectedSongs.size,
+                onAddToPlaylist = { showMultiAddToPlaylistSheet = true },
+                onClearSelection = clearSelection,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .then(
+                        if (isTablet) Modifier.widthIn(max = 680.dp)
+                        else Modifier.fillMaxWidth()
+                    )
+                    .padding(horizontal = horizontalPadding)
+                    .padding(bottom = searchBarHeightPadding + navigationBarsBottom + 8.dp)
             )
         }
 
@@ -1683,6 +1823,33 @@ fun UniversalSearchScreen(
             )
         }
 
+        if (showMultiAddToPlaylistSheet && selectedSongs.isNotEmpty()) {
+            AddToPlaylistBottomSheet(
+                song = selectedSongs.values.first(),
+                playlists = localPlaylists,
+                onDismissRequest = { showMultiAddToPlaylistSheet = false },
+                onAddToPlaylist = { playlist ->
+                    val songsToAdd = selectedSongs.values.distinctBy { it.id }
+                    val (successCount, playlistName) = localViewModel.addSongsToPlaylist(songsToAdd, playlist.id)
+                    val message = if (successCount > 0) {
+                        "Added $successCount song${if (successCount == 1) "" else "s"} to $playlistName"
+                    } else {
+                        "No songs were added to $playlistName"
+                    }
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    showMultiAddToPlaylistSheet = false
+                    clearSelection()
+                },
+                onCreateNewPlaylist = {
+                    showMultiAddToPlaylistSheet = false
+                    // Do not let a previously inspected single song leak into the
+                    // "create playlist with song" action of the multi-select flow.
+                    selectedSongForPlaylist = null
+                    showCreatePlaylistDialog = true
+                }
+            )
+        }
+
         if (showSongInfoSheet && selectedSongForInfo != null) {
             SongInfoBottomSheet(
                 song = selectedSongForInfo,
@@ -1800,8 +1967,12 @@ data class SongSearchItem(
     val subtitle: String,
     val artworkUri: Any?,
     val originalSong: Any,
+    val selectionKey: String,
+    val selectionSong: Song,
     val onClick: () -> Unit
 )
+
+private fun searchSelectionKey(mode: String, id: String) = "$mode:$id"
 
 private fun groupedSongItemShape(index: Int, totalCount: Int): RoundedCornerShape {
     return when {
@@ -1823,6 +1994,60 @@ private fun groupedSongItemShape(index: Int, totalCount: Int): RoundedCornerShap
 }
 
 @Composable
+private fun SearchSelectionActionBar(
+    selectedCount: Int,
+    onAddToPlaylist: () -> Unit,
+    onClearSelection: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 3.dp,
+        shadowElevation = 6.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onClearSelection) {
+                Icon(
+                    imageVector = RhythmIcons.Close,
+                    contentDescription = stringResource(R.string.ui_clear),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Text(
+                text = pluralStringResource(
+                    R.plurals.library_selected_count_format,
+                    selectedCount,
+                    selectedCount
+                ),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f)
+            )
+            FilledTonalButton(
+                onClick = onAddToPlaylist,
+                enabled = selectedCount > 0
+            ) {
+                Icon(
+                    imageVector = MaterialSymbolIcon("playlist_add", filled = true),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.library_action_add_to_playlist))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
 fun UniversalSearchSongItem(
     title: String,
     subtitle: String,
@@ -1832,16 +2057,19 @@ fun UniversalSearchSongItem(
     onMoreClick: () -> Unit,
     haptics: androidx.compose.ui.hapticfeedback.HapticFeedback,
     index: Int = 0,
-    totalCount: Int = 1
+    totalCount: Int = 1,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onLongClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     Card(
-        onClick = {
-            HapticUtils.performHapticFeedback(context, haptics, HapticType.LIGHT)
-            onClick()
-        },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            }
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = groupedSongItemShape(index, totalCount),
@@ -1850,9 +2078,27 @@ fun UniversalSearchSongItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .combinedClickable(
+                    onClick = {
+                        HapticUtils.performHapticFeedback(context, haptics, HapticType.LIGHT)
+                        onClick()
+                    },
+                    onLongClick = {
+                        HapticUtils.performHapticFeedback(context, haptics, HapticType.MEDIUM)
+                        onLongClick?.invoke()
+                    }
+                )
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (isSelectionMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = null,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+
             M3ImageUtils.TrackImage(
                 imageUrl = artworkUri,
                 trackName = title,
@@ -1919,25 +2165,27 @@ fun UniversalSearchSongItem(
                 }
             }
 
-            FilledIconButton(
-                onClick = {
-                    HapticUtils.performHapticFeedback(context, haptics, HapticType.HEAVY)
-                    onMoreClick()
-                },
-                modifier = Modifier
-                    .width(32.dp)
-                    .height(44.dp),
-                shape = RoundedCornerShape(50),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            ) {
-                Icon(
-                    imageVector = RhythmIcons.More,
-                    contentDescription = stringResource(R.string.content_desc_more_options),
-                    modifier = Modifier.size(22.dp)
-                )
+            if (!isSelectionMode) {
+                FilledIconButton(
+                    onClick = {
+                        HapticUtils.performHapticFeedback(context, haptics, HapticType.HEAVY)
+                        onMoreClick()
+                    },
+                    modifier = Modifier
+                        .width(32.dp)
+                        .height(44.dp),
+                    shape = RoundedCornerShape(50),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Icon(
+                        imageVector = RhythmIcons.More,
+                        contentDescription = stringResource(R.string.content_desc_more_options),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
         }
     }
@@ -2083,7 +2331,11 @@ fun UniversalAllSongsPage(
     onOptionsClick: (Any) -> Unit,
     onLocalSongClick: (Song, List<Song>) -> Unit,
     onStreamingSongClick: (StreamingSong) -> Unit,
-    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback
+    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback,
+    isSelectionMode: Boolean = false,
+    selectedKeys: Set<String> = emptySet(),
+    onToggleSelection: (String, Song) -> Unit = { _, _ -> },
+    onEnterSelection: (String, Song) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val allSongs = buildList {
@@ -2092,7 +2344,8 @@ fun UniversalAllSongsPage(
     }
 
     val miniPlayerBottomPadding = LocalMiniPlayerPadding.current.calculateBottomPadding()
-    val contentBottomPadding = (miniPlayerBottomPadding + 20.dp).coerceAtLeast(96.dp)
+    val contentBottomPadding = (miniPlayerBottomPadding + 20.dp).coerceAtLeast(96.dp) +
+        (if (isSelectionMode) 72.dp else 0.dp)
     val isTablet = windowScreenWidthDp() >= 600
     val horizontalPadding = if (isTablet) 32.dp else 24.dp
 
@@ -2125,15 +2378,37 @@ fun UniversalAllSongsPage(
                 val album = if (isLocal) (item.first as Song).album else (item.first as StreamingSong).album
                 val artworkUri = if (isLocal) (item.first as Song).artworkUri else (item.first as StreamingSong).artworkUri
 
+                val songId = if (isLocal) (item.first as Song).id else (item.first as StreamingSong).id
+                val selectionKey = searchSelectionKey(item.second, songId)
+                val selectionSong = if (isLocal) {
+                    item.first as Song
+                } else {
+                    (item.first as StreamingSong).toLocalSong()
+                }
+
                 UniversalSearchSongItem(
                     title = title,
                     subtitle = "$artist • $album",
                     artworkUri = artworkUri,
                     mode = item.second,
                     onClick = {
-                        if (isLocal) onLocalSongClick(item.first as Song, localSongs)
-                        else onStreamingSongClick(item.first as StreamingSong)
+                        if (isSelectionMode) {
+                            onToggleSelection(selectionKey, selectionSong)
+                        } else if (isLocal) {
+                            onLocalSongClick(item.first as Song, localSongs)
+                        } else {
+                            onStreamingSongClick(item.first as StreamingSong)
+                        }
                     },
+                    onLongClick = {
+                        if (isSelectionMode) {
+                            onToggleSelection(selectionKey, selectionSong)
+                        } else {
+                            onEnterSelection(selectionKey, selectionSong)
+                        }
+                    },
+                    isSelectionMode = isSelectionMode,
+                    isSelected = selectionKey in selectedKeys,
                     onMoreClick = {
                         onOptionsClick(item.first)
                     },
