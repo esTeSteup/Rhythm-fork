@@ -1996,15 +1996,15 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 val cachedCount = _songs.value.size
                 if (cachedCount == 0 || repository.isLibraryStale(lastScan, cachedCount)) {
                     Log.d(TAG, "Library is empty or stale on startup (count=$cachedCount), triggering background refresh")
-                    performMediaStoreRefresh()
+                    performMediaStoreRefresh(forceFullScan = false)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error during startup staleness check", e)
             }
         }
         
-        // Register ContentObserver for automatic MediaStore updates
-        // Use a full refresh instead of incremental scan to detect removed/re-added songs.
+        // Register ContentObserver for automatic MediaStore updates.
+        // Differential refresh reuses unchanged rows and still removes songs that disappeared.
         // Cancel any pending refresh job before scheduling a new one (debounce pattern).
         mediaStoreObserverRegisteredTimeMs = SystemClock.elapsedRealtime()
         repository.registerMediaStoreObserver {
@@ -2020,8 +2020,8 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 val lastScan = appSettings.lastScanTimestamp.value
                 val cachedCount = _songs.value.size
                 if (repository.isLibraryStale(lastScan, cachedCount)) {
-                    Log.d(TAG, "MediaStore changed and library is stale. Performing full refresh.")
-                    performMediaStoreRefresh()
+                    Log.d(TAG, "MediaStore changed and library is stale. Performing differential refresh.")
+                    performMediaStoreRefresh(forceFullScan = false)
                 } else {
                     Log.d(TAG, "MediaStore callback received, but library is up-to-date. Skipping refresh.")
                 }
@@ -2304,12 +2304,13 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     /**
-     * Perform a full library refresh triggered by MediaStore ContentObserver.
-     * Unlike incremental scan, this detects removed, re-added, and new songs properly.
+     * Refresh the library in response to a MediaStore change (or a stale library on startup).
+     * Differential by default so unchanged tracks are not re-parsed; set [forceFullScan] only
+     * when a complete rebuild is required.
      * Runs on IO dispatcher to avoid blocking the main thread.
      */
-    private suspend fun performMediaStoreRefresh() {
-        Log.d(TAG, "Performing full MediaStore refresh...")
+    private suspend fun performMediaStoreRefresh(forceFullScan: Boolean = true) {
+        Log.d(TAG, "Performing MediaStore refresh (forceFullScan=$forceFullScan)...")
         try {
             val currentCount = _songs.value.size
             val cachedSongMap = _songs.value.associateBy { it.id }
@@ -2318,7 +2319,8 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 repository.refreshMusicData(
                     allowedFormats = allowedFormats.value,
                     minimumBitrate = minimumBitrate.value,
-                    minimumDuration = minimumDuration.value
+                    minimumDuration = minimumDuration.value,
+                    forceFullScan = forceFullScan
                 )
             }
             // Merge cached metadata into fresh songs to preserve post-scan processing data

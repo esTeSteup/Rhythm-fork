@@ -662,18 +662,18 @@ class MusicRepository(context: Context) {
         
         // Observer for audio media changes (new/deleted/modified songs)
         val audioObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                super.onChange(selfChange)
-                Log.d(TAG, "MediaStore audio changed, triggering callback")
+            override fun onChange(selfChange: Boolean, uri: Uri?) {
+                super.onChange(selfChange, uri)
+                Log.d(TAG, "MediaStore audio changed: $uri")
                 onChange()
             }
         }
-        
+
         // Observer for playlist changes
         val playlistObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                super.onChange(selfChange)
-                Log.d(TAG, "MediaStore playlists changed, triggering callback")
+            override fun onChange(selfChange: Boolean, uri: Uri?) {
+                super.onChange(selfChange, uri)
+                Log.d(TAG, "MediaStore playlists changed: $uri")
                 onChange()
             }
         }
