@@ -615,6 +615,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_PLAYER_TEXT_ALIGNMENT = "player_text_alignment" // "START", "CENTER", "END"
         private const val KEY_PLAYER_SHOW_SONG_INFO_ON_ARTWORK = "player_show_song_info_on_artwork"
         private const val KEY_PLAYER_ARTWORK_CORNER_RADIUS = "player_artwork_corner_radius" // 0-40 dp
+        private const val KEY_PLAYER_ARTWORK_ROTATE = "player_artwork_rotate" // Boolean
         private const val KEY_PLAYER_SHOW_AUDIO_QUALITY_BADGES = "player_show_audio_quality_badges"
         private const val KEY_EXPRESSIVE_QUALITY_BADGE_ALWAYS_VISIBLE = "expressive_quality_badge_always_visible"
         private const val KEY_PLAYER_PROGRESS_STYLE = "player_progress_style" // "NORMAL", "WAVY", "ROUNDED", "THIN", "THICK"
@@ -5831,6 +5832,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         _playerTextAlignment.value = prefs.getString(KEY_PLAYER_TEXT_ALIGNMENT, "CENTER") ?: "CENTER"
         _playerShowSongInfoOnArtwork.value = prefs.getBoolean(KEY_PLAYER_SHOW_SONG_INFO_ON_ARTWORK, true)
         _playerArtworkCornerRadius.value = prefs.getInt(KEY_PLAYER_ARTWORK_CORNER_RADIUS, 28)
+        _playerArtworkRotate.value = prefs.getBoolean(KEY_PLAYER_ARTWORK_ROTATE, false)
         _playerShowAudioQualityBadges.value = prefs.getBoolean(KEY_PLAYER_SHOW_AUDIO_QUALITY_BADGES, true)
         _expressiveQualityBadgeAlwaysVisible.value = prefs.getBoolean(KEY_EXPRESSIVE_QUALITY_BADGE_ALWAYS_VISIBLE, false)
         
@@ -6440,6 +6442,14 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     fun setPlayerProgressThumbRotate(value: Boolean) {
         _playerProgressThumbRotate.value = value
         prefs.edit { putBoolean(KEY_PLAYER_PROGRESS_THUMB_ROTATE, value) }
+    }
+
+    // Player artwork rotation while playing
+    private val _playerArtworkRotate = MutableStateFlow(prefs.getBoolean(KEY_PLAYER_ARTWORK_ROTATE, false))
+    val playerArtworkRotate: StateFlow<Boolean> = _playerArtworkRotate.asStateFlow()
+    fun setPlayerArtworkRotate(value: Boolean) {
+        _playerArtworkRotate.value = value
+        prefs.edit { putBoolean(KEY_PLAYER_ARTWORK_ROTATE, value) }
     }
     
     // ==================== MiniPlayer Customization Settings ====================

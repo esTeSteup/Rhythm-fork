@@ -112,6 +112,7 @@ import chromahub.rhythm.app.shared.presentation.components.lyrics.LyricsEditorBo
 import chromahub.rhythm.app.shared.presentation.components.lyrics.SyncedLyricsView
 import chromahub.rhythm.app.shared.presentation.components.lyrics.WordByWordLyricsView
 import chromahub.rhythm.app.shared.presentation.components.player.formatDuration
+import chromahub.rhythm.app.shared.presentation.components.player.rememberArtworkRotation
 import chromahub.rhythm.app.features.local.presentation.navigation.Screen
 import chromahub.rhythm.app.features.local.presentation.viewmodel.MusicViewModel
 import chromahub.rhythm.app.shared.data.model.Album
@@ -323,6 +324,7 @@ fun ExpressivePlayerScreen(
     val playerProgressStyle by appSettings.playerProgressStyle.collectAsState()
     val playerProgressThumbStyle by appSettings.playerProgressThumbStyle.collectAsState()
     val playerProgressThumbRotate by appSettings.playerProgressThumbRotate.collectAsState()
+    val playerArtworkRotate by appSettings.playerArtworkRotate.collectAsState()
     val enhancedSeekingEnabled by appSettings.enhancedSeekingEnabled.collectAsState()
     val playerAmbientBackdropEnabled by appSettings.playerAmbientBackdropEnabled.collectAsState()
     val playerAmbientBackdropIntensity by appSettings.playerAmbientBackdropIntensity.collectAsState()
@@ -1179,6 +1181,11 @@ fun ExpressivePlayerScreen(
                 )
 
                 val artworkView = @Composable { modifier: Modifier, isSmall: Boolean ->
+                    val artworkRotation = rememberArtworkRotation(
+                        isPlaying = isPlaying,
+                        enabled = playerArtworkRotate && hasValidArtwork &&
+                            canvasArtwork?.preferredAnimationUrl == null
+                    )
                     Box(
                         modifier = modifier,
                         contentAlignment = Alignment.Center
@@ -1240,7 +1247,9 @@ fun ExpressivePlayerScreen(
                                 targetState = hasValidArtwork,
                                 transitionSpec = { fadeIn(tween(800)).togetherWith(fadeOut(tween(600))) },
                                 label = "artworkIconTransition",
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer { rotationZ = artworkRotation },
                                 contentAlignment = Alignment.Center
                             ) { validArtwork ->
                                 if (validArtwork) {

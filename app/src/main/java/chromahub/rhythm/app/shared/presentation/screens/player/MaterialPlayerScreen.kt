@@ -201,6 +201,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBarsPadding
 import chromahub.rhythm.app.shared.presentation.components.player.formatDuration
+import chromahub.rhythm.app.shared.presentation.components.player.rememberArtworkRotation
 import java.util.concurrent.TimeUnit
 import chromahub.rhythm.app.shared.presentation.components.common.PlaybackBufferingLoader
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.ArtistChooserBottomSheet
@@ -353,7 +354,8 @@ fun MaterialPlayerScreen(
     val playerProgressStyle by appSettingsInstance.playerProgressStyle.collectAsState()
     val playerProgressThumbStyle by appSettingsInstance.playerProgressThumbStyle.collectAsState()
     val playerProgressThumbRotate by appSettingsInstance.playerProgressThumbRotate.collectAsState()
-    
+    val playerArtworkRotate by appSettingsInstance.playerArtworkRotate.collectAsState()
+
     // Enhanced seeking settings
     val enhancedSeekingEnabled by appSettingsInstance.enhancedSeekingEnabled.collectAsState()
     val showLyricsTranslation by appSettingsInstance.showLyricsTranslation.collectAsState()
@@ -1673,6 +1675,12 @@ fun MaterialPlayerScreen(
                             label = "artworkTranslationX"
                         )
                         
+                        val artworkRotation = rememberArtworkRotation(
+                            isPlaying = isPlaying,
+                            enabled = playerArtworkRotate && song?.artworkUri != null &&
+                                canvasArtwork?.preferredAnimationUrl == null
+                        )
+
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight(if (isLandscapeTablet) 1.0f else if (isTablet) 0.55f else albumArtFraction) // Responsive size based on screen dimensions
@@ -1772,6 +1780,7 @@ fun MaterialPlayerScreen(
                                                 modifier = Modifier
                                                     .fillMaxSize()
                                                     .clip(playerArtworkShape)
+                                                    .graphicsLayer { rotationZ = artworkRotation }
                                             )
 
                                             if (canvasArtwork?.preferredAnimationUrl != null) {

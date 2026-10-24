@@ -184,6 +184,7 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
     val playerTextAlignment by appSettings.playerTextAlignment.collectAsState()
     val playerShowSongInfoOnArtwork by appSettings.playerShowSongInfoOnArtwork.collectAsState()
     val playerArtworkCornerRadius by appSettings.playerArtworkCornerRadius.collectAsState()
+    val playerArtworkRotate by appSettings.playerArtworkRotate.collectAsState()
     val playerShowAudioQualityBadges by appSettings.playerShowAudioQualityBadges.collectAsState()
     val expressiveQualityBadgeAlwaysVisible by appSettings.expressiveQualityBadgeAlwaysVisible.collectAsState()
     val expressiveShapesEnabled by appSettings.expressiveShapesEnabled.collectAsState()
@@ -578,6 +579,17 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                                     onClick = { showCornerRadiusSheet = true }
                                 )
                             }
+                        ),
+                        toMaterial3SettingsItem(
+                            context = context,
+                            hapticFeedback = haptics,
+                            item = SettingItem(
+                                icon = MaterialSymbolIcon("rotate_right"),
+                                title = context.getString(R.string.settings_artwork_rotate),
+                                description = context.getString(R.string.settings_artwork_rotate_desc),
+                                toggleState = playerArtworkRotate,
+                                onToggleChange = { appSettings.setPlayerArtworkRotate(it) }
+                            )
                         )
                     ),
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
