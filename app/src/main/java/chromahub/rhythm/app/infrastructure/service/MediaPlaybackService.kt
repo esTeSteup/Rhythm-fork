@@ -599,7 +599,15 @@ class MediaPlaybackService : MediaLibraryService(), Player.Listener {
         Log.d(TAG, "Service created")
 
         setMediaNotificationProvider(
-            androidx.media3.session.DefaultMediaNotificationProvider(this).apply {
+            // Use the app-owned channel instead of Media3's hidden "default_channel_id".
+            // Otherwise the media notification can be governed by a channel the user
+            // cannot identify in system settings (and which may be disabled/blocked).
+            androidx.media3.session.DefaultMediaNotificationProvider(
+                this,
+                { _ -> NOTIFICATION_ID },
+                CHANNEL_ID,
+                chromahub.rhythm.app.R.string.media3_notification_channel_name
+            ).apply {
                 setSmallIcon(chromahub.rhythm.app.R.drawable.ic_notification)
             }
         )
