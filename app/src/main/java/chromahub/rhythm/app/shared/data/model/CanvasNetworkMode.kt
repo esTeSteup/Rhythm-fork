@@ -14,7 +14,7 @@ enum class CanvasNetworkMode(val displayName: String) {
     
     companion object {
         fun fromOrdinal(ordinal: Int): CanvasNetworkMode {
-            return values().getOrElse(ordinal) { BOTH }
+            return values().getOrElse(ordinal) { WIFI_ONLY }
         }
     }
 }

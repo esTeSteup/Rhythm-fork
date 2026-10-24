@@ -72,7 +72,7 @@ enum class ArtistArtworkSource {
 
     companion object {
         fun fromName(name: String?): ArtistArtworkSource {
-            return entries.find { it.name.equals(name, ignoreCase = true) } ?: PREFER_LOCAL_THEN_API
+            return entries.find { it.name.equals(name, ignoreCase = true) } ?: DISABLED
         }
     }
 }
@@ -1196,7 +1196,7 @@ class AppSettings private constructor(context: Context) {
     private val _streamingQuality = MutableStateFlow(prefs.getString(KEY_STREAMING_QUALITY, "LOSSLESS") ?: "LOSSLESS")
     val streamingQuality: StateFlow<String> = _streamingQuality.asStateFlow()
     
-    private val _allowCellularStreaming = MutableStateFlow(prefs.getBoolean(KEY_ALLOW_CELLULAR_STREAMING, true))
+    private val _allowCellularStreaming = MutableStateFlow(prefs.getBoolean(KEY_ALLOW_CELLULAR_STREAMING, false))
     val allowCellularStreaming: StateFlow<Boolean> = _allowCellularStreaming.asStateFlow()
     
     private val _offlineMode = MutableStateFlow(prefs.getBoolean(KEY_OFFLINE_MODE, false))
@@ -1774,11 +1774,11 @@ class AppSettings private constructor(context: Context) {
     private val _wikipediaApiEnabled = MutableStateFlow(prefs.getBoolean(KEY_WIKIPEDIA_API_ENABLED, false))
     val wikipediaApiEnabled: StateFlow<Boolean> = _wikipediaApiEnabled.asStateFlow()
     
-    private val _autoFetchArtwork = MutableStateFlow(prefs.getBoolean(KEY_AUTO_FETCH_ARTWORK, true))
+    private val _autoFetchArtwork = MutableStateFlow(prefs.getBoolean(KEY_AUTO_FETCH_ARTWORK, false))
     val autoFetchArtwork: StateFlow<Boolean> = _autoFetchArtwork.asStateFlow()
 
     private val _artistArtworkSource = MutableStateFlow(
-        ArtistArtworkSource.fromName(prefs.getString(KEY_ARTIST_ARTWORK_SOURCE, ArtistArtworkSource.PREFER_LOCAL_THEN_API.name))
+        ArtistArtworkSource.fromName(prefs.getString(KEY_ARTIST_ARTWORK_SOURCE, ArtistArtworkSource.DISABLED.name))
     )
     val artistArtworkSource: StateFlow<ArtistArtworkSource> = _artistArtworkSource.asStateFlow()
 
@@ -1786,7 +1786,7 @@ class AppSettings private constructor(context: Context) {
     val appleCanvasEnabled: StateFlow<Boolean> = _appleCanvasEnabled.asStateFlow()
 
     private val _appleCanvasNetworkMode = MutableStateFlow(
-        CanvasNetworkMode.fromOrdinal(prefs.getInt(KEY_APPLE_CANVAS_NETWORK_MODE, CanvasNetworkMode.BOTH.ordinal))
+        CanvasNetworkMode.fromOrdinal(prefs.getInt(KEY_APPLE_CANVAS_NETWORK_MODE, CanvasNetworkMode.WIFI_ONLY.ordinal))
     )
     val appleCanvasNetworkMode: StateFlow<CanvasNetworkMode> = _appleCanvasNetworkMode.asStateFlow()
     
@@ -1901,7 +1901,7 @@ class AppSettings private constructor(context: Context) {
     val embeddedArtworkExtractionLosslessStatus: StateFlow<Boolean> = _embeddedArtworkExtractionLosslessStatus.asStateFlow()
 
     // App Updater Settings
-private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CHECK_FOR_UPDATES, BuildConfig.FLAVOR != "fdroid"))
+private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CHECK_FOR_UPDATES, false))
     val autoCheckForUpdates: StateFlow<Boolean> = _autoCheckForUpdates.asStateFlow()
     
     private val _updateChannel = MutableStateFlow(prefs.getString(KEY_UPDATE_CHANNEL, "stable") ?: "stable")
@@ -1910,10 +1910,10 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     private val _updateSource = MutableStateFlow(prefs.getString(KEY_UPDATE_SOURCE, "installed") ?: "installed")
     val updateSource: StateFlow<String> = _updateSource.asStateFlow()
     
-    private val _updatesEnabled = MutableStateFlow(prefs.getBoolean(KEY_UPDATES_ENABLED, BuildConfig.FLAVOR != "fdroid"))
+    private val _updatesEnabled = MutableStateFlow(prefs.getBoolean(KEY_UPDATES_ENABLED, false))
     val updatesEnabled: StateFlow<Boolean> = _updatesEnabled.asStateFlow()
     
-    private val _updateNotificationsEnabled = MutableStateFlow(prefs.getBoolean(KEY_UPDATE_NOTIFICATIONS_ENABLED, BuildConfig.FLAVOR != "fdroid"))
+    private val _updateNotificationsEnabled = MutableStateFlow(prefs.getBoolean(KEY_UPDATE_NOTIFICATIONS_ENABLED, false))
     val updateNotificationsEnabled: StateFlow<Boolean> = _updateNotificationsEnabled.asStateFlow()
 
     private val _updateStatusNotificationsEnabled = MutableStateFlow(prefs.getBoolean(KEY_UPDATE_STATUS_NOTIFICATIONS_ENABLED, false))
@@ -5679,7 +5679,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         _wikipediaApiEnabled.value = prefs.getBoolean(KEY_WIKIPEDIA_API_ENABLED, false)
         _appleCanvasEnabled.value = prefs.getBoolean(KEY_APPLE_CANVAS_ENABLED, false)
         _appleCanvasNetworkMode.value = CanvasNetworkMode.fromOrdinal(
-            prefs.getInt(KEY_APPLE_CANVAS_NETWORK_MODE, CanvasNetworkMode.BOTH.ordinal)
+            prefs.getInt(KEY_APPLE_CANVAS_NETWORK_MODE, CanvasNetworkMode.WIFI_ONLY.ordinal)
         )
         _lyricallySourcesOrder.value = prefs.getString(KEY_LYRICALLY_SOURCES_ORDER, null)
             ?.split(",")
@@ -5691,7 +5691,7 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
             ?.filter { it.isNotBlank() && it in defaultLyricallySources }
             ?.toSet()
             ?: defaultDisabledLyricallySources
-        _autoFetchArtwork.value = prefs.getBoolean(KEY_AUTO_FETCH_ARTWORK, true)
+        _autoFetchArtwork.value = prefs.getBoolean(KEY_AUTO_FETCH_ARTWORK, false)
         _spotifyClientId.value = prefs.getString(KEY_SPOTIFY_CLIENT_ID, "") ?: ""
         _spotifyClientSecret.value = prefs.getString(KEY_SPOTIFY_CLIENT_SECRET, "") ?: ""
 
@@ -5707,11 +5707,11 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         _externalPlayerAutoCloseOnFinish.value = prefs.getBoolean(KEY_EXTERNAL_PLAYER_AUTO_CLOSE_ON_FINISH, false)
         
         // App Updates
-        _autoCheckForUpdates.value = prefs.getBoolean(KEY_AUTO_CHECK_FOR_UPDATES, BuildConfig.FLAVOR != "fdroid")
+        _autoCheckForUpdates.value = prefs.getBoolean(KEY_AUTO_CHECK_FOR_UPDATES, false)
         _updateChannel.value = prefs.getString(KEY_UPDATE_CHANNEL, "stable") ?: "stable"
         _updateSource.value = prefs.getString(KEY_UPDATE_SOURCE, "installed") ?: "installed"
-        _updatesEnabled.value = prefs.getBoolean(KEY_UPDATES_ENABLED, BuildConfig.FLAVOR != "fdroid")
-        _updateNotificationsEnabled.value = prefs.getBoolean(KEY_UPDATE_NOTIFICATIONS_ENABLED, BuildConfig.FLAVOR != "fdroid")
+        _updatesEnabled.value = prefs.getBoolean(KEY_UPDATES_ENABLED, false)
+        _updateNotificationsEnabled.value = prefs.getBoolean(KEY_UPDATE_NOTIFICATIONS_ENABLED, false)
         _updateStatusNotificationsEnabled.value = prefs.getBoolean(KEY_UPDATE_STATUS_NOTIFICATIONS_ENABLED, false)
         _mediaScanMode.value = MediaScanMode.fromValue(prefs.getString(KEY_MEDIA_SCAN_MODE, "blacklist") ?: "blacklist")
         _includeHiddenWhitelistedMedia.value = prefs.getBoolean(KEY_INCLUDE_HIDDEN_WHITELISTED_MEDIA, true)
