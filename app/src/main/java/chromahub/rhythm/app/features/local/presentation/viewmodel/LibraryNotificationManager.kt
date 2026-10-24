@@ -88,7 +88,8 @@ class LibraryNotificationManager(private val context: Application) {
         progress: Int = 0,
         max: Int = 0,
         indeterminate: Boolean = true,
-        requestCode: Int = notificationId
+        requestCode: Int = notificationId,
+        ongoing: Boolean = true
     ) {
         val appSettings = chromahub.rhythm.app.shared.data.model.AppSettings.getInstance(context)
         if (!appSettings.libraryOperationsNotificationsEnabled.value) {
@@ -110,7 +111,7 @@ class LibraryNotificationManager(private val context: Application) {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setOngoing(true)
+            .setOngoing(ongoing)
             .setAutoCancel(false)
             .setProgress(max.coerceAtLeast(0), progress.coerceAtLeast(0), indeterminate)
             .setContentIntent(createMainActivityPendingIntent(requestCode))
@@ -367,7 +368,9 @@ class LibraryNotificationManager(private val context: Application) {
                             notificationId = LIBRARY_SETUP_NOTIFICATION_ID,
                             title = context.getString(R.string.notification_library_setup_title),
                             content = progressText,
-                            indeterminate = true
+                            indeterminate = true,
+                            // Post-scan processing can be long; let the user dismiss it.
+                            ongoing = false
                         )
                     }
 

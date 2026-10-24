@@ -6,6 +6,7 @@
 package chromahub.rhythm.app
 
 import android.app.Application
+import android.app.NotificationManager
 import android.content.ComponentCallbacks2
 import android.os.Build
 import android.util.Log
@@ -20,6 +21,7 @@ import okhttp3.Dispatcher
 import chromahub.rhythm.app.infrastructure.widget.glance.GlanceShapeBitmaps
 import chromahub.rhythm.app.infrastructure.widget.glance.RhythmCookieWidget
 import chromahub.rhythm.app.infrastructure.widget.glance.RhythmMusicWidget
+import chromahub.rhythm.app.features.local.presentation.viewmodel.LibraryNotificationManager
 import chromahub.rhythm.app.shared.data.model.AppSettings
 import chromahub.rhythm.app.util.ANRWatchdog
 import chromahub.rhythm.app.util.CacheManager
@@ -56,7 +58,21 @@ class RhythmApplication : Application(), ImageLoaderFactory {
         super.onCreate()
         
         instance = this
-        
+
+        // Operation progress notifications (media scan, library setup, playlist import/export)
+        // are ongoing notifications. If the previous process died mid-task they would otherwise
+        // stay in the shade forever because nothing survives to cancel them.
+        try {
+            getSystemService(NotificationManager::class.java)?.apply {
+                cancel(LibraryNotificationManager.MEDIA_SCAN_NOTIFICATION_ID)
+                cancel(LibraryNotificationManager.PLAYLIST_IMPORT_NOTIFICATION_ID)
+                cancel(LibraryNotificationManager.PLAYLIST_EXPORT_NOTIFICATION_ID)
+                cancel(LibraryNotificationManager.LIBRARY_SETUP_NOTIFICATION_ID)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to clear stale operation notifications", e)
+        }
+
         Log.d(TAG, "═══════════════════════════════════════════════════")
         Log.d(TAG, "RhythmApplication onCreate")
         Log.d(TAG, "Build Type: ${BuildConfig.BUILD_TYPE}")
