@@ -79,19 +79,46 @@ class PreloadController(
         }
     }
 
+    private var queue: List<MediaItem> = emptyList()
+
     fun setPlayingIndex(index: Int) {
         targetPreloadStatusControl.currentPlayingIndex = index
-        preloadManager?.setCurrentPlayingIndex(index)
-        preloadManager?.invalidate()
+        refreshPreloadWindow()
     }
 
-    fun addOrUpdateQueue(mediaItems: List<MediaItem>) {
+    fun addOrUpdateQueue(mediaItems: List<MediaItem>, currentIndex: Int = C.INDEX_UNSET) {
+        queue = mediaItems
+        targetPreloadStatusControl.currentPlayingIndex = currentIndex
+        refreshPreloadWindow()
+    }
+
+    /**
+     * Registers only the tracks around the current item that can actually be preloaded.
+     *
+     * Registering the whole queue made media3's DefaultPreloadManager recurse once per
+     * PRELOAD_STATUS_NOT_PRELOADED item: onSkipped runs synchronously when already on the
+     * application thread, so a library-sized queue overflows the stack. The resulting
+     * StackOverflowError escapes through the player's timeline listener, fails the
+     * MediaSession command that changed the queue, and leaves the app's MediaController
+     * out of sync while the player keeps playing.
+     */
+    private fun refreshPreloadWindow() {
         val manager = preloadManager ?: return
-        
-        // Add items to preload manager with their list index as ranking data
-        mediaItems.forEachIndexed { index, mediaItem ->
-            manager.add(mediaItem, index)
+        val currentIndex = targetPreloadStatusControl.currentPlayingIndex
+        if (queue.isEmpty() || currentIndex == C.INDEX_UNSET) {
+            manager.reset()
+            return
         }
+
+        val start = (currentIndex - 1).coerceAtLeast(0)
+        val end = (currentIndex + targetPreloadStatusControl.preloadLimit + 1)
+            .coerceAtMost(queue.lastIndex)
+
+        manager.reset()
+        for (index in start..end) {
+            manager.add(queue[index], index)
+        }
+        manager.setCurrentPlayingIndex(currentIndex)
         manager.invalidate()
     }
 
