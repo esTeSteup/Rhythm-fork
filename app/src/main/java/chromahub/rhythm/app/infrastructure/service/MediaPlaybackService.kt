@@ -2590,22 +2590,9 @@ notificationManager.createNotificationChannel(sleepTimerChannel)
             }
             availableCommands.add(SessionCommand("UPDATE_ACTIVE_LYRIC", Bundle.EMPTY))
             availableCommands.add(SessionCommand("UPDATE_LYRICS_DATA", Bundle.EMPTY))
-
-            // The app can hold tens of thousands of local tracks in one queue. Bluetooth's
-            // media process cannot deserialize the full MediaSession timeline (it has a
-            // 256 MB heap and has been observed to OOM on QueueItem parceling), so keep the
-            // queue out of the Bluetooth controller. Play/pause/next/previous still work.
-            val playerCommands = if (controller.packageName == "com.android.bluetooth") {
-                MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
-                    .remove(Player.COMMAND_GET_TIMELINE)
-                    .build()
-            } else {
-                MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
-            }
-
             return MediaSession.ConnectionResult.accept(
                 availableCommands.build(),
-                playerCommands
+                MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
             )
         }
 
