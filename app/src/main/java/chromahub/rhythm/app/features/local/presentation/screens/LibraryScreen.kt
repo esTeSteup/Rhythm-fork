@@ -5509,14 +5509,24 @@ fun PlaylistFabMenu(
     haptics: androidx.compose.ui.hapticfeedback.HapticFeedback
 ) {
     val context = LocalContext.current
-    val menuItems = remember(onCreatePlaylist, onImportPlaylist, onExportPlaylists) {
+    val newPlaylistLabel = stringResource(R.string.library_new_playlist)
+    val importPlaylistLabel = stringResource(R.string.import_playlist)
+    val exportPlaylistsLabel = stringResource(R.string.cd_export_playlists)
+    val menuItems = remember(
+        newPlaylistLabel,
+        importPlaylistLabel,
+        exportPlaylistsLabel,
+        onCreatePlaylist,
+        onImportPlaylist,
+        onExportPlaylists
+    ) {
         listOfNotNull(
-            Triple("New playlist", RhythmIcons.Add, onCreatePlaylist),
+            Triple(newPlaylistLabel, RhythmIcons.Add, onCreatePlaylist),
             onImportPlaylist?.let {
-                Triple("Import playlist", RhythmIcons.Actions.Download, it)
+                Triple(importPlaylistLabel, RhythmIcons.Actions.Download, it)
             },
             onExportPlaylists?.let {
-                Triple("Export playlists", MaterialSymbolIcon("file_upload"), it)
+                Triple(exportPlaylistsLabel, MaterialSymbolIcon("file_upload"), it)
             }
         )
     }

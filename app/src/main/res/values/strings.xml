@@ -722,6 +722,7 @@
     <string name="file_info">File Info</string>
 <string name="add_to_playlists">Add to Playlists</string>
     <string name="playlist_create_new">Create New Playlist</string>
+    <string name="library_new_playlist">New playlist</string>
     <string name="playlist_create_first">Create your first playlist to add songs</string>
 
     <string name="theme_system_fonts_unavailable">System fonts are only available when using System font source.</string>

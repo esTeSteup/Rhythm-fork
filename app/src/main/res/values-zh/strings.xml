@@ -371,7 +371,7 @@
     </plurals>
     <string name="library_playlist_name_empty">播放列表名称不能为空</string>
     <!-- Sort Options -->
-    <string name="sort_name">姓名</string>
+    <string name="sort_name">名称</string>
     <string name="sort_date_created">创建日期</string>
     <string name="sort_song_count">歌曲数</string>
     <!-- Storage Permission -->
@@ -688,6 +688,7 @@
     <!-- Components: Add to Playlist -->
     <string name="add_to_playlists">添加到播放列表</string>
     <string name="playlist_create_new">创建新播放列表</string>
+    <string name="library_new_playlist">新建播放列表</string>
     <string name="playlist_create_first">创建您的第一个播放列表以添加歌曲</string>
     <!-- Components: Cache Management (Bottom Sheet) -->
     <string name="theme_system_fonts_unavailable">系统字体仅在使用系统字体源时可用。</string>

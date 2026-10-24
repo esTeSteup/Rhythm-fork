@@ -970,7 +970,7 @@ fun PlaylistDetailScreen(
                     if (!isDefault && onImportPlaylist != null) {
                         add(
                             RhythmMenuItem(
-                                title = "Import playlist",
+                                title = stringResource(R.string.import_playlist),
                                 icon = RhythmIcons.Actions.Download,
                                 iconContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
                                 iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
