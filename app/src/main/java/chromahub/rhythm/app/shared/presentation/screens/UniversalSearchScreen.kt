@@ -2054,6 +2054,9 @@ private fun SearchSelectionActionBar(
                 ),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
             IconButton(
@@ -2074,15 +2077,21 @@ private fun SearchSelectionActionBar(
             }
             FilledTonalButton(
                 onClick = onAddToPlaylist,
-                enabled = selectedCount > 0
+                enabled = selectedCount > 0,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 Icon(
                     imageVector = MaterialSymbolIcon("playlist_add", filled = true),
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.library_action_add_to_playlist))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = stringResource(R.string.universalsearchscreen_add_to_playlist),
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
