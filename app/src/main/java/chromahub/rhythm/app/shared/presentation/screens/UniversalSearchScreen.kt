@@ -339,6 +339,19 @@ fun UniversalSearchScreen(
             matchedLocalArtists.isNotEmpty() || matchedStreamingArtists.isNotEmpty() ||
             matchedLocalPlaylists.isNotEmpty() || matchedStreamingPlaylists.isNotEmpty()
 
+    val selectableSongs = remember(matchedLocalSongs, matchedStreamingSongs) {
+        buildMap {
+            matchedLocalSongs.forEach { song ->
+                put(searchSelectionKey("LOCAL", song.id), song)
+            }
+            matchedStreamingSongs.forEach { song ->
+                put(searchSelectionKey("STREAMING", song.id), song.toLocalSong())
+            }
+        }
+    }
+    val allSelectableSongsSelected = selectableSongs.isNotEmpty() &&
+        selectedSongs.keys.containsAll(selectableSongs.keys)
+
     val clearSelection = {
         isSelectionMode = false
         selectedSongs = emptyMap()
@@ -360,6 +373,13 @@ fun UniversalSearchScreen(
         focusManager.clearFocus()
         isSelectionMode = true
         selectedSongs = selectedSongs + (key to song)
+    }
+
+    val toggleSelectAll = {
+        if (selectableSongs.isNotEmpty()) {
+            isSelectionMode = true
+            selectedSongs = if (allSelectableSongsSelected) emptyMap() else selectableSongs
+        }
     }
 
     // A new query produces a new result set; partial selections would be ambiguous.
@@ -1622,6 +1642,9 @@ fun UniversalSearchScreen(
         if (isSelectionMode) {
             SearchSelectionActionBar(
                 selectedCount = selectedSongs.size,
+                allSelected = allSelectableSongsSelected,
+                canSelectAll = selectableSongs.isNotEmpty(),
+                onToggleSelectAll = toggleSelectAll,
                 onAddToPlaylist = { showMultiAddToPlaylistSheet = true },
                 onClearSelection = clearSelection,
                 modifier = Modifier
@@ -1996,6 +2019,9 @@ private fun groupedSongItemShape(index: Int, totalCount: Int): RoundedCornerShap
 @Composable
 private fun SearchSelectionActionBar(
     selectedCount: Int,
+    allSelected: Boolean,
+    canSelectAll: Boolean,
+    onToggleSelectAll: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onClearSelection: () -> Unit,
     modifier: Modifier = Modifier
@@ -2030,6 +2056,22 @@ private fun SearchSelectionActionBar(
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
             )
+            IconButton(
+                onClick = onToggleSelectAll,
+                enabled = canSelectAll
+            ) {
+                Icon(
+                    imageVector = MaterialSymbolIcon(
+                        if (allSelected) "check_box" else "select_all",
+                        filled = true
+                    ),
+                    contentDescription = stringResource(
+                        if (allSelected) R.string.universalsearchscreen_deselect_all
+                        else R.string.universalsearchscreen_select_all
+                    ),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
             FilledTonalButton(
                 onClick = onAddToPlaylist,
                 enabled = selectedCount > 0

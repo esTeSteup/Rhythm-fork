@@ -1974,6 +1974,8 @@
     <string name="universalsearchscreen_search_across_local_streaming">Search across Local &amp; Streaming</string>
     <string name="universalsearchscreen_loading_streaming_results">Loading streaming results…</string>
     <string name="universalsearchscreen_search_everywhere">Search everywhere…</string>
+    <string name="universalsearchscreen_select_all">Select all</string>
+    <string name="universalsearchscreen_deselect_all">Deselect all</string>
     <string name="universalsearchscreen_removed_from_streaming_favorites">Removed from streaming favorites</string>
     <string name="universalsearchscreen_added_to_streaming_favorites">Added to streaming favorites</string>
     <string name="universalsearchscreen_album_not_found">Album not found</string>

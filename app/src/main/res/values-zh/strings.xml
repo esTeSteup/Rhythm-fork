@@ -1945,6 +1945,8 @@
     <string name="universalsearchscreen_search_across_local_streaming">跨本地和流媒体搜索</string>
     <string name="universalsearchscreen_loading_streaming_results">正在加载流结果…</string>
     <string name="universalsearchscreen_search_everywhere">到处搜索……</string>
+    <string name="universalsearchscreen_select_all">全选</string>
+    <string name="universalsearchscreen_deselect_all">取消全选</string>
     <string name="universalsearchscreen_removed_from_streaming_favorites">已从流媒体收藏夹中删除</string>
     <string name="universalsearchscreen_added_to_streaming_favorites">已添加至流媒体收藏夹</string>
     <string name="universalsearchscreen_album_not_found">未找到专辑</string>
