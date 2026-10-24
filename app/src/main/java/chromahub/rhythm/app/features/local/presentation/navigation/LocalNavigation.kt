@@ -2293,12 +2293,16 @@ private fun LocalNavigationContent(
                             if (route == SettingsRoutes.DEFAULT_PLAYLISTS) {
                                 navController.navigate(Screen.TunerDefaultPlaylists.route)
                             }
-                        }
+                        },
+                        musicViewModel = viewModel
                     )
                 }
 
                 composable(Screen.TunerDefaultPlaylists.route) {
-                    DefaultPlaylistsSettingsScreen(onBackClick = navigateBackOrToSettings)
+                    DefaultPlaylistsSettingsScreen(
+                        onBackClick = navigateBackOrToSettings,
+                        musicViewModel = viewModel
+                    )
                 }
 
                 composable(Screen.TunerApiManagement.route) {

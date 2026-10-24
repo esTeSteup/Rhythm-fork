@@ -1145,10 +1145,12 @@ fun SettingsScreenWrapper(
                         SettingsRoutes.NOTIFICATIONS -> NotificationsSettingsScreen(onBackClick = handleBack)
                         SettingsRoutes.PLAYLISTS -> PlaylistsSettingsScreen(
                             onBackClick = handleBack,
-                            onNavigateTo = onNavigateToSubsetting
+                            onNavigateTo = onNavigateToSubsetting,
+                            musicViewModel = musicViewModel
                         )
                         SettingsRoutes.DEFAULT_PLAYLISTS -> DefaultPlaylistsSettingsScreen(
-                            onBackClick = handleBack
+                            onBackClick = handleBack,
+                            musicViewModel = musicViewModel
                         )
                         SettingsRoutes.MEDIA_SCAN -> MediaScanSettingsScreen(onBackClick = handleBack)
                         SettingsRoutes.ARTIST_SEPARATORS -> ArtistSeparatorsSettingsScreen(onBackClick = handleBack)
@@ -1301,10 +1303,12 @@ fun SettingsScreenWrapper(
                 SettingsRoutes.NOTIFICATIONS -> NotificationsSettingsScreen(onBackClick = handleBack)
                 SettingsRoutes.PLAYLISTS -> PlaylistsSettingsScreen(
                     onBackClick = handleBack,
-                    onNavigateTo = onNavigateToSubsetting
+                    onNavigateTo = onNavigateToSubsetting,
+                    musicViewModel = musicViewModel
                 )
                 SettingsRoutes.DEFAULT_PLAYLISTS -> DefaultPlaylistsSettingsScreen(
-                    onBackClick = handleBack
+                    onBackClick = handleBack,
+                    musicViewModel = musicViewModel
                 )
                 SettingsRoutes.MEDIA_SCAN -> MediaScanSettingsScreen(onBackClick = handleBack)
                 SettingsRoutes.ARTIST_SEPARATORS -> ArtistSeparatorsSettingsScreen(onBackClick = handleBack)

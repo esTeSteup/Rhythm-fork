@@ -35,12 +35,12 @@ import chromahub.rhythm.app.util.HapticUtils
 
 @Composable
 fun DefaultPlaylistsSettingsScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    musicViewModel: MusicViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val appSettings = AppSettings.getInstance(context)
-    val musicViewModel: MusicViewModel = viewModel()
     
     val defaultPlaylistsEnabled by appSettings.defaultPlaylistsEnabled.collectAsState()
     val showLikedInPlaylists by appSettings.showLikedInPlaylists.collectAsState()

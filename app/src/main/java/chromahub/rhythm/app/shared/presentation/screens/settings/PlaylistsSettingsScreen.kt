@@ -168,12 +168,12 @@ import chromahub.rhythm.app.shared.presentation.screens.settings.SettingGroup
 @Composable
 fun PlaylistsSettingsScreen(
     onBackClick: () -> Unit,
-    onNavigateTo: (String) -> Unit = {}
+    onNavigateTo: (String) -> Unit = {},
+    musicViewModel: MusicViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val appSettings = AppSettings.getInstance(context)
-    val musicViewModel: MusicViewModel = viewModel()
     val playlists by musicViewModel.playlists.collectAsState()
     val defaultPlaylistsEnabled by appSettings.defaultPlaylistsEnabled.collectAsState()
 
