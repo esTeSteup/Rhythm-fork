@@ -3671,7 +3671,7 @@ private fun LocalNavigationContent(
                             if (isStreamingMode) {
                                 streamingMusicViewModel.loadLibrary()
                             } else {
-                                viewModel.refreshLibrary(showMediaScanLoader = false)
+                                viewModel.refreshLibrary(showMediaScanLoader = false, forceFullScan = false)
                             }
                         }, // Added onRefreshClick
                         sortOrder = sortOrder,

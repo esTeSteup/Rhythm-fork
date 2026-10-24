@@ -930,7 +930,8 @@ class MusicRepository(context: Context) {
         forceRefresh: Boolean = false,
         allowedFormats: Set<String>? = null,
         minimumBitrate: Int = 0,
-        minimumDuration: Long = 0L
+        minimumDuration: Long = 0L,
+        differentialScan: Boolean = false
     ): List<Song> = withContext(Dispatchers.IO) {
         // Check MediaStore permissions before scanning
         val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -959,16 +960,17 @@ class MusicRepository(context: Context) {
             shouldForceRefresh = true
         }
 
-        // Check in-memory cache first
-        if (!shouldForceRefresh && 
-            cachedSongs != null && 
+        // Check in-memory cache first. A differential refresh must bypass the cache so it can
+        // compare MediaStore against Room even when the cached list is still fresh.
+        if (!shouldForceRefresh && !differentialScan &&
+            cachedSongs != null &&
             System.currentTimeMillis() - cacheTimestamp < CACHE_VALIDITY_MS) {
             Log.d(TAG, "Returning cached songs (${cachedSongs!!.size})")
             return@withContext cachedSongs!!
         }
-        
+
         // On cold start (no in-memory cache), try loading from Room cache
-        if (!shouldForceRefresh && cachedSongs == null) {
+        if (!shouldForceRefresh && !differentialScan && cachedSongs == null) {
             val diskCached = loadSongsFromRoom()
             if (diskCached != null) {
                 cachedSongs = diskCached
@@ -995,7 +997,11 @@ class MusicRepository(context: Context) {
         val whitelistedFolders = appSettings.whitelistedFolders.value
         val includeHiddenWhitelistedMedia = appSettings.includeHiddenWhitelistedMedia.value
         
-        Log.d(TAG, "Executing scan via MediaScanEngine")
+        Log.d(TAG, if (differentialScan && !shouldForceRefresh) {
+            "Executing differential scan via MediaScanEngine"
+        } else {
+            "Executing full scan via MediaScanEngine"
+        })
         val scanned = mediaScanEngine.performScan(
             forceRefresh = shouldForceRefresh,
             allowedFormats = allowedFormats,
@@ -2475,30 +2481,34 @@ class MusicRepository(context: Context) {
     suspend fun refreshMusicData(
         allowedFormats: Set<String>? = null,
         minimumBitrate: Int = 0,
-        minimumDuration: Long = 0L
+        minimumDuration: Long = 0L,
+        forceFullScan: Boolean = true
     ): Triple<List<Song>, List<Album>, List<Artist>> {
-        Log.d(TAG, "Refreshing music data...")
-        
+        Log.d(TAG, "Refreshing music data (forceFullScan=$forceFullScan)...")
+
         // Invalidate in-memory cache to force fresh query
         cachedSongs = null
         cacheTimestamp = 0L
+        // Derived artist tables must be rebuilt even for a differential scan: a song whose
+        // metadata changed keeps its ID, so MediaScanEngine would not detect it as new/stale.
         try {
             roomDb.artistDao().deleteAll()
             roomDb.songArtistDao().deleteAll()
         } catch (e: Exception) {
             Log.w(TAG, "Failed to clear artist cache on refresh", e)
         }
-        
+
         val songs = loadSongs(
-            forceRefresh = true,
+            forceRefresh = forceFullScan,
             allowedFormats = allowedFormats,
             minimumBitrate = minimumBitrate,
-            minimumDuration = minimumDuration
+            minimumDuration = minimumDuration,
+            differentialScan = !forceFullScan
         )
         val albums = loadAlbums()
         val artists = loadArtists()
         Log.d(TAG, "Music data refresh complete.")
-        
+
         return Triple(songs, albums, artists)
     }
 

@@ -659,7 +659,7 @@ fun HomeScreen(
                 coroutineScope = coroutineScope,
                 isRefreshing = isLibraryRefreshing,
                 onRefresh = {
-                    musicViewModel.refreshLibrary(showMediaScanLoader = false)
+                    musicViewModel.refreshLibrary(showMediaScanLoader = false, forceFullScan = false)
                 }
             )
         }

@@ -2485,22 +2485,40 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
      * Triggers a refresh of all music data by rescanning the device's MediaStore.
      * This will update the songs, albums, and artists in the ViewModel.
      */
-    fun refreshLibrary(showMediaScanLoader: Boolean = true) {
+    fun refreshLibrary(showMediaScanLoader: Boolean = true, forceFullScan: Boolean = true) {
         mediaScanNotificationSequence += 1
         val notificationSequence = mediaScanNotificationSequence
         armLibrarySetupCompletionNotification()
 
         // Cancel any existing scan
         scanJob?.cancel()
-        
+
         scanJob = viewModelScope.launch {
-            Log.d(TAG, "Starting library refresh...")
+            Log.d(TAG, "Starting library refresh (forceFullScan=$forceFullScan)...")
             val previousSongCount = _songs.value.size
             var refreshCompletedSuccessfully = false
             var refreshCancelled = false
 
-            _isMediaScanning.value = showMediaScanLoader // Only show full-screen loader when requested
             _isLibraryRefreshing.value = true // Always set for pull-to-refresh tracking
+
+            // Pull-to-refresh skips the scan entirely when MediaStore has not changed since
+            // the last scan, avoiding a full cursor walk + metadata pass for a no-op refresh.
+            // Never skip while a backup restore is queued: its callback runs in the finally block.
+            if (!forceFullScan && pendingRestore == null) {
+                val lastScan = appSettings.lastScanTimestamp.value
+                val cachedCount = _songs.value.size
+                val needsScan = withContext(Dispatchers.IO) {
+                    cachedCount == 0 || repository.isLibraryStale(lastScan, cachedCount)
+                }
+                if (!needsScan) {
+                    Log.d(TAG, "Library refresh skipped: MediaStore unchanged since last scan")
+                    _isLibraryRefreshing.value = false
+                    disarmLibrarySetupCompletionNotification()
+                    return@launch
+                }
+            }
+
+            _isMediaScanning.value = showMediaScanLoader // Only show full-screen loader when requested
             if (showMediaScanLoader) {
                 // Only a full-screen scan should hide the app behind the initialization
                 // loader; pull-to-refresh and background rescans keep the app visible.
@@ -2511,7 +2529,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             // Don't reset _isGenreDetectionRunning to allow proper concurrency check
 
             startMediaScanProgressNotifications(notificationSequence)
-            
+
             val startTime = System.currentTimeMillis()
 
             try {
@@ -2520,7 +2538,8 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 val (freshSongs, freshAlbums, freshArtists) = repository.refreshMusicData(
                     allowedFormats = allowedFormats.value,
                     minimumBitrate = minimumBitrate.value,
-                    minimumDuration = minimumDuration.value
+                    minimumDuration = minimumDuration.value,
+                    forceFullScan = forceFullScan
                 )
 
                 // Update StateFlows with the fresh data
