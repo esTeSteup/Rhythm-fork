@@ -359,6 +359,10 @@ fun MaterialPlayerScreen(
 
     // Enhanced seeking settings
     val enhancedSeekingEnabled by appSettingsInstance.enhancedSeekingEnabled.collectAsState()
+    val playerHaptics by appSettingsInstance.playerHaptics.collectAsState()
+    val playerHaptic: (HapticType) -> Unit = { type ->
+        if (playerHaptics) HapticUtils.performHapticFeedback(context, haptic, type)
+    }
     val showLyricsTranslation by appSettingsInstance.showLyricsTranslation.collectAsState()
     val showLyricsRomanization by appSettingsInstance.showLyricsRomanization.collectAsState()
     val keepScreenOnLyrics by appSettingsInstance.keepScreenOnLyrics.collectAsState()
@@ -1303,7 +1307,7 @@ fun MaterialPlayerScreen(
         title = stringResource(R.string.settings_player),
         showBackButton = true,
         onBackClick = {
-            HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+            playerHaptic(HapticType.HEAVY)
             onBack()
         },
         modifier = if (swipeToDismissEnabled) {
@@ -1357,11 +1361,7 @@ fun MaterialPlayerScreen(
                                     (velocityTracker > fastSwipeThreshold && swipeOffsetY > screenHeight * 0.03f)
 
                                 if (shouldDismiss) {
-                                    HapticUtils.performHapticFeedback(
-                                        context,
-                                        haptic,
-                                        HapticType.HEAVY
-                                    )
+                                    playerHaptic(HapticType.HEAVY)
                                     scope.launch {
                                         isSwipeDismissing = true
                                         swipeOffsetY = dismissTargetOffset
@@ -1443,7 +1443,7 @@ fun MaterialPlayerScreen(
             // Song info button
             FilledTonalIconButton(
                 onClick = {
-                    HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                    playerHaptic(HapticType.HEAVY)
                     showSongInfoSheet = true
                 },
                 modifier = Modifier.size(
@@ -1599,11 +1599,7 @@ fun MaterialPlayerScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    HapticUtils.performHapticFeedback(
-                                        context,
-                                        haptic,
-                                        HapticType.HEAVY
-                                    )
+                                    playerHaptic(HapticType.HEAVY)
                                     openArtistForSong(song)
                                 }
                         )
@@ -1707,14 +1703,14 @@ fun MaterialPlayerScreen(
                                             onDoubleTap = {
                                                 if (gestureArtworkDoubleTap) {
                                                     // Double tap to play/pause
-                                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                                                    playerHaptic(HapticType.HEAVY)
                                                     onPlayPause()
                                                 }
                                             },
                                             onTap = {
                                                 if (gestureArtworkSingleTap && showLyrics) {
                                                     // Single tap - toggle lyrics if available
-                                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                                    playerHaptic(HapticType.LIGHT)
                                                     showLyricsView = !showLyricsView
                                                 }
                                             }
@@ -1727,11 +1723,11 @@ fun MaterialPlayerScreen(
                                             onDragEnd = {
                                                 if (artworkOffsetX < -artworkSwipeThreshold) {
                                                     // Swipe left - next track
-                                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                                                    playerHaptic(HapticType.HEAVY)
                                                     onSkipNext()
                                                 } else if (artworkOffsetX > artworkSwipeThreshold) {
                                                     // Swipe right - previous track
-                                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                                                    playerHaptic(HapticType.HEAVY)
                                                     onSkipPrevious()
                                                 }
                                                 artworkOffsetX = 0f
@@ -2187,11 +2183,7 @@ fun MaterialPlayerScreen(
                                                                     // Retry button
                                                                     ExpressiveGroupButton(
                                                                         onClick = {
-                                                                            HapticUtils.performHapticFeedback(
-                                                                                context,
-                                                                                haptic,
-                                                                                HapticType.HEAVY
-                                                                            )
+                                                                            playerHaptic(HapticType.HEAVY)
                                                                             onRetryLyrics()
                                                                         },
                                                                         isStart = true,
@@ -2209,11 +2201,7 @@ fun MaterialPlayerScreen(
                                                                     // Lyrics Editor button
                                                                     ExpressiveGroupButton(
                                                                         onClick = {
-                                                                            HapticUtils.performHapticFeedback(
-                                                                                context,
-                                                                                haptic,
-                                                                                HapticType.HEAVY
-                                                                            )
+                                                                            playerHaptic(HapticType.HEAVY)
                                                                             showLyricsEditorDialog = true
                                                                         },
                                                                         isStart = false,
@@ -2231,11 +2219,7 @@ fun MaterialPlayerScreen(
                                                                     // Lyrics Settings button
                                                                     ExpressiveGroupButton(
                                                                         onClick = {
-                                                                            HapticUtils.performHapticFeedback(
-                                                                                context,
-                                                                                haptic,
-                                                                                HapticType.HEAVY
-                                                                            )
+                                                                            playerHaptic(HapticType.HEAVY)
                                                                             try {
                                                                                 navController.navigate(Screen.TunerLyrics.route) {
                                                                                     popUpTo(Screen.Player.route) {
@@ -2449,11 +2433,7 @@ fun MaterialPlayerScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        HapticUtils.performHapticFeedback(
-                                            context,
-                                            haptic,
-                                            HapticType.HEAVY
-                                        )
+                                        playerHaptic(HapticType.HEAVY)
                                         openArtistForSong(song)
                                     },
                                 enabled = true
@@ -2622,7 +2602,9 @@ fun MaterialPlayerScreen(
                                                 }
                                             },
                                             onSeekFinished = {
-                                                HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                                if (playerHaptics) {
+                                                    playerHaptic(HapticType.LIGHT)
+                                                }
                                                 if (canSeek && enhancedSeekingEnabled && isScrubbing) {
                                                     onSeek(scrubProgress)
                                                     isScrubbing = false
@@ -2691,36 +2673,20 @@ fun MaterialPlayerScreen(
                             isPlaying = isPlaying && !showLoaderInPlayPauseButton,
                             showSeekButtons = playerShowSeekButtons && canSeek,
                             onPrevious = {
-                                HapticUtils.performHapticFeedback(
-                                    context,
-                                    haptic,
-                                    HapticType.LIGHT
-                                )
+                                playerHaptic(HapticType.LIGHT)
                                 onSkipPrevious()
                             },
                             onPlayPause = {
-                                HapticUtils.performHapticFeedback(
-                                    context,
-                                    haptic,
-                                    HapticType.HEAVY
-                                )
+                                playerHaptic(HapticType.HEAVY)
                                 onPlayPause()
                             },
                             onNext = {
-                                HapticUtils.performHapticFeedback(
-                                    context,
-                                    haptic,
-                                    HapticType.HEAVY
-                                )
+                                playerHaptic(HapticType.HEAVY)
                                 onSkipNext()
                             },
                             onSeekBack = {
                                 if (canSeek) {
-                                    HapticUtils.performHapticFeedback(
-                                        context,
-                                        haptic,
-                                        HapticType.HEAVY
-                                    )
+                                    playerHaptic(HapticType.HEAVY)
                                     onSeek(
                                         ((progress() * totalTimeMs).toLong() - 10000).coerceAtLeast(0L)
                                             .toFloat() / totalTimeMs
@@ -2729,11 +2695,7 @@ fun MaterialPlayerScreen(
                             },
                             onSeekForward = {
                                 if (canSeek) {
-                                    HapticUtils.performHapticFeedback(
-                                        context,
-                                        haptic,
-                                        HapticType.HEAVY
-                                    )
+                                    playerHaptic(HapticType.HEAVY)
                                     onSeek(
                                         ((progress() * totalTimeMs).toLong() + 10000).coerceAtMost(totalTimeMs)
                                             .toFloat() / totalTimeMs
@@ -2768,27 +2730,15 @@ fun MaterialPlayerScreen(
                             lyricsVisible = showLyricsView,
                             repeatMode = repeatMode,
                             onToggleShuffle = {
-                                HapticUtils.performHapticFeedback(
-                                    context,
-                                    haptic,
-                                    HapticType.HEAVY
-                                )
+                                playerHaptic(HapticType.HEAVY)
                                 onToggleShuffle()
                             },
                             onToggleLyrics = {
-                                HapticUtils.performHapticFeedback(
-                                    context,
-                                    haptic,
-                                    HapticType.HEAVY
-                                )
+                                playerHaptic(HapticType.HEAVY)
                                 showLyricsView = !showLyricsView
                             },
                             onToggleRepeat = {
-                                HapticUtils.performHapticFeedback(
-                                    context,
-                                    haptic,
-                                    HapticType.HEAVY
-                                )
+                                playerHaptic(HapticType.HEAVY)
                                 onToggleRepeat()
                             },
                             onLongClickLyrics = onOpenFullScreenLyrics,
@@ -2839,11 +2789,7 @@ fun MaterialPlayerScreen(
                             ) {
                                 IconButton(
                                     onClick = {
-                                        HapticUtils.performHapticFeedback(
-                                            context,
-                                            haptic,
-                                            HapticType.HEAVY
-                                        )
+                                        playerHaptic(HapticType.HEAVY)
                                         showChips = true
                                     },
                                     modifier = Modifier
@@ -2880,7 +2826,7 @@ fun MaterialPlayerScreen(
                                 ) + fadeOut(animationSpec = tween(300))
                             ) {
                                 val onChipLongClick = {
-                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                                    playerHaptic(HapticType.HEAVY)
                                     showChipOrderBottomSheet = true
                                 }
                                 val chipShape = RoundedCornerShape(if (isExtraSmallWidth) 12.dp else 16.dp)
@@ -2908,11 +2854,7 @@ fun MaterialPlayerScreen(
                                     item {
                                         MaterialPlayerChip(
                                             onClick = {
-                                                HapticUtils.performHapticFeedback(
-                                                    context,
-                                                    haptic,
-                                                    HapticType.HEAVY
-                                                )
+                                                playerHaptic(HapticType.HEAVY)
                                                 onAddToPlaylist()
                                             },
                                             onLongClick = onChipLongClick,
@@ -2972,11 +2914,7 @@ fun MaterialPlayerScreen(
 
                                                 MaterialPlayerChip(
                                                     onClick = {
-                                                        HapticUtils.performHapticFeedback(
-                                                            context,
-                                                            haptic,
-                                                            HapticType.HEAVY
-                                                        )
+                                                        playerHaptic(HapticType.HEAVY)
                                                         onToggleFavorite()
                                                     },
                                                     onLongClick = onChipLongClick,
@@ -3028,11 +2966,7 @@ fun MaterialPlayerScreen(
 
                                                 MaterialPlayerChip(
                                                     onClick = {
-                                                        HapticUtils.performHapticFeedback(
-                                                            context,
-                                                            haptic,
-                                                            HapticType.HEAVY
-                                                        )
+                                                        playerHaptic(HapticType.HEAVY)
                                                         showPlaybackSpeedDialog = true
                                                     },
                                                     onLongClick = onChipLongClick,
@@ -3086,11 +3020,7 @@ fun MaterialPlayerScreen(
 
                                                 MaterialPlayerChip(
                                                     onClick = {
-                                                        HapticUtils.performHapticFeedback(
-                                                            context,
-                                                            haptic,
-                                                            HapticType.HEAVY
-                                                        )
+                                                        playerHaptic(HapticType.HEAVY)
                                                         showPlaybackPitchDialog = true
                                                     },
                                                     onLongClick = onChipLongClick,
@@ -3130,11 +3060,7 @@ fun MaterialPlayerScreen(
 
                                                 MaterialPlayerChip(
                                                     onClick = {
-                                                        HapticUtils.performHapticFeedback(
-                                                            context,
-                                                            haptic,
-                                                            HapticType.HEAVY
-                                                        )
+                                                        playerHaptic(HapticType.HEAVY)
                                                         navController.navigate(Screen.Equalizer.route)
                                                     },
                                                     onLongClick = onChipLongClick,
@@ -3186,11 +3112,7 @@ fun MaterialPlayerScreen(
 
                                                 MaterialPlayerChip(
                                                     onClick = {
-                                                        HapticUtils.performHapticFeedback(
-                                                            context,
-                                                            haptic,
-                                                            HapticType.HEAVY
-                                                        )
+                                                        playerHaptic(HapticType.HEAVY)
                                                         showSleepTimerBottomSheet = true
                                                     },
                                                     onLongClick = onChipLongClick,
@@ -3221,11 +3143,7 @@ fun MaterialPlayerScreen(
 
                                                 MaterialPlayerChip(
                                                     onClick = {
-                                                        HapticUtils.performHapticFeedback(
-                                                            context,
-                                                            haptic,
-                                                            HapticType.HEAVY
-                                                        )
+                                                        playerHaptic(HapticType.HEAVY)
                                                         showLyricsEditorDialog = true
                                                     },
                                                     onLongClick = onChipLongClick,
@@ -3253,11 +3171,7 @@ fun MaterialPlayerScreen(
                                             "ALBUM" -> {
                                                 MaterialPlayerChip(
                                                     onClick = {
-                                                        HapticUtils.performHapticFeedback(
-                                                            context,
-                                                            haptic,
-                                                            HapticType.HEAVY
-                                                        )
+                                                        playerHaptic(HapticType.HEAVY)
                                                         song?.let { currentSong ->
                                                             val albumForSong = resolveAlbumForSong(currentSong)
                                                             if (albumForSong != null) {
@@ -3299,11 +3213,7 @@ fun MaterialPlayerScreen(
                                             "ARTIST" -> {
                                                 MaterialPlayerChip(
                                                     onClick = {
-                                                        HapticUtils.performHapticFeedback(
-                                                            context,
-                                                            haptic,
-                                                            HapticType.HEAVY
-                                                        )
+                                                        playerHaptic(HapticType.HEAVY)
                                                         song?.let { currentSong ->
                                                             openArtistForSong(currentSong)
                                                         }
@@ -3333,11 +3243,7 @@ fun MaterialPlayerScreen(
                                             "SHARE" -> {
                                                 MaterialPlayerChip(
                                                     onClick = {
-                                                        HapticUtils.performHapticFeedback(
-                                                            context,
-                                                            haptic,
-                                                            HapticType.HEAVY
-                                                        )
+                                                        playerHaptic(HapticType.HEAVY)
                                                         shareSong()
                                                     },
                                                     onLongClick = onChipLongClick,
@@ -3369,11 +3275,7 @@ fun MaterialPlayerScreen(
                                     item {
                                         MaterialPlayerChip(
                                             onClick = {
-                                                HapticUtils.performHapticFeedback(
-                                                    context,
-                                                    haptic,
-                                                    HapticType.HEAVY
-                                                )
+                                                playerHaptic(HapticType.HEAVY)
                                                 showChipOrderBottomSheet = true
                                             },
                                             onLongClick = onChipLongClick,
@@ -3446,11 +3348,7 @@ fun MaterialPlayerScreen(
                             // Device Output button - expressive style
                             Surface(
                                 onClick = {
-                                    HapticUtils.performHapticFeedback(
-                                        context,
-                                        haptic,
-                                        HapticType.HEAVY
-                                    )
+                                    playerHaptic(HapticType.HEAVY)
                                     showDeviceOutputSheet = true
                                 },
                                 shape = RoundedCornerShape(28.dp),
@@ -3583,11 +3481,7 @@ fun MaterialPlayerScreen(
                                 ) {
                                     Surface(
                                         onClick = {
-                                            HapticUtils.performHapticFeedback(
-                                                context,
-                                                haptic,
-                                                HapticType.HEAVY
-                                            )
+                                            playerHaptic(HapticType.HEAVY)
                                             showCompactChipsSheet = true
                                         },
                                         shape = RoundedCornerShape(28.dp),
@@ -3614,11 +3508,7 @@ fun MaterialPlayerScreen(
                             // Queue button - expressive style
                             Surface(
                                 onClick = {
-                                    HapticUtils.performHapticFeedback(
-                                        context,
-                                        haptic,
-                                        HapticType.HEAVY
-                                    )
+                                    playerHaptic(HapticType.HEAVY)
                                     if (song != null) {
                                         showQueueSheet = true
                                     } else {

@@ -200,6 +200,7 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
     val playerProgressStyle by appSettings.playerProgressStyle.collectAsState()
     val playerProgressThumbStyle by appSettings.playerProgressThumbStyle.collectAsState()
     val playerProgressThumbRotate by appSettings.playerProgressThumbRotate.collectAsState()
+    val playerHaptics by appSettings.playerHaptics.collectAsState()
 
     var showChipOrderBottomSheet by remember { mutableStateOf(false) }
     var showExpressiveBottomButtonsSheet by remember { mutableStateOf(false) }
@@ -537,6 +538,17 @@ fun PlayerCustomizationSettingsScreen(onBackClick: () -> Unit) {
                                 description = context.getString(R.string.settings_thumb_rotate_desc),
                                 toggleState = playerProgressThumbRotate,
                                 onToggleChange = { appSettings.setPlayerProgressThumbRotate(it) }
+                            )
+                        ),
+                        toMaterial3SettingsItem(
+                            context = context,
+                            hapticFeedback = haptics,
+                            item = SettingItem(
+                                icon = MaterialSymbolIcon("vibration"),
+                                title = context.getString(R.string.settings_player_haptics),
+                                description = context.getString(R.string.settings_player_haptics_desc),
+                                toggleState = playerHaptics,
+                                onToggleChange = { appSettings.setPlayerHaptics(it) }
                             )
                         )
                     ),

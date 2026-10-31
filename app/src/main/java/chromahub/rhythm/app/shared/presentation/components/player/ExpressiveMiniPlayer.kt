@@ -100,6 +100,10 @@ fun ExpressiveMiniPlayer(
     val density = LocalDensity.current
     val appSettings = remember { AppSettings.getInstance(context) }
     val coroutineScope = rememberCoroutineScope()
+    val playerHaptics by appSettings.playerHaptics.collectAsState()
+    val playerHaptic: (HapticType) -> Unit = { type ->
+        if (playerHaptics) HapticUtils.performHapticFeedback(context, haptic, type)
+    }
 
     val miniPlayerSwipeGestures by appSettings.miniPlayerSwipeGestures.collectAsState()
     val miniPlayerSwipeTracks by appSettings.miniPlayerSwipeTracks.collectAsState()
@@ -252,7 +256,7 @@ fun ExpressiveMiniPlayer(
                         isUserInteracting = true
                         lastHapticOffset = 0f
                         lastHapticOffsetX = 0f
-                        HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                        playerHaptic(HapticType.LIGHT)
                     },
                     onDragEnd = {
                         val absX = abs(carouselOffsetX.value)
@@ -260,7 +264,7 @@ fun ExpressiveMiniPlayer(
 
                         if (absX > absY && canSwipeTracks) {
                             if (carouselOffsetX.value < -swipeHorizontalThreshold) {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                                playerHaptic(HapticType.HEAVY)
                                 coroutineScope.launch {
                                     isCarouselFlinging = true
                                     carouselOffsetX.animateTo(
@@ -283,7 +287,7 @@ fun ExpressiveMiniPlayer(
                                     isUserInteracting = false
                                 }
                             } else if (carouselOffsetX.value > swipeHorizontalThreshold) {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                                playerHaptic(HapticType.HEAVY)
                                 coroutineScope.launch {
                                     isCarouselFlinging = true
                                     carouselOffsetX.animateTo(
@@ -306,7 +310,7 @@ fun ExpressiveMiniPlayer(
                                     isUserInteracting = false
                                 }
                             } else {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                playerHaptic(HapticType.LIGHT)
                                 coroutineScope.launch {
                                     carouselOffsetX.animateTo(
                                         targetValue = 0f,
@@ -323,7 +327,7 @@ fun ExpressiveMiniPlayer(
                             }
                         } else if (canSwipeVertical) {
                             if (carouselOffsetY.value < -swipeUpThreshold) {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                                playerHaptic(HapticType.HEAVY)
                                 onPlayerClick()
                                 coroutineScope.launch {
                                     carouselOffsetY.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 400f))
@@ -331,14 +335,14 @@ fun ExpressiveMiniPlayer(
                                     isUserInteracting = false
                                 }
                             } else if (carouselOffsetY.value > swipeDownThreshold) {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                                playerHaptic(HapticType.HEAVY)
                                 isDismissingPlayer = true
                                 coroutineScope.launch {
                                     carouselOffsetY.animateTo(500f, tween(150))
                                     handleDismiss()
                                 }
                             } else {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                playerHaptic(HapticType.LIGHT)
                                 coroutineScope.launch {
                                     carouselOffsetY.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 400f))
                                     carouselOffsetX.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 400f))
@@ -354,7 +358,7 @@ fun ExpressiveMiniPlayer(
                         }
                     },
                     onDragCancel = {
-                        HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                        playerHaptic(HapticType.LIGHT)
                         coroutineScope.launch {
                             carouselOffsetX.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 400f))
                             carouselOffsetY.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 400f))
@@ -372,12 +376,12 @@ fun ExpressiveMiniPlayer(
 
                             if (absX > absY) {
                                 if (absX - abs(lastHapticOffsetX) > swipeHorizontalThreshold / 2) {
-                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                    playerHaptic(HapticType.LIGHT)
                                     lastHapticOffsetX = carouselOffsetX.value
                                 }
                             } else {
                                 if (absY - abs(lastHapticOffset) > swipeUpThreshold / 2) {
-                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                    playerHaptic(HapticType.LIGHT)
                                     lastHapticOffset = carouselOffsetY.value
                                 }
                             }
@@ -389,11 +393,11 @@ fun ExpressiveMiniPlayer(
                     onDragStart = {
                         isUserInteracting = true
                         lastHapticOffsetX = 0f
-                        HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                        playerHaptic(HapticType.LIGHT)
                     },
                     onDragEnd = {
                         if (carouselOffsetX.value < -swipeHorizontalThreshold) {
-                            HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                            playerHaptic(HapticType.HEAVY)
                             coroutineScope.launch {
                                 isCarouselFlinging = true
                                 carouselOffsetX.animateTo(
@@ -416,7 +420,7 @@ fun ExpressiveMiniPlayer(
                                 isUserInteracting = false
                             }
                         } else if (carouselOffsetX.value > swipeHorizontalThreshold) {
-                            HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                            playerHaptic(HapticType.HEAVY)
                             coroutineScope.launch {
                                 isCarouselFlinging = true
                                 carouselOffsetX.animateTo(
@@ -439,7 +443,7 @@ fun ExpressiveMiniPlayer(
                                 isUserInteracting = false
                             }
                         } else {
-                            HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                            playerHaptic(HapticType.LIGHT)
                             coroutineScope.launch {
                                 carouselOffsetX.animateTo(
                                     targetValue = 0f,
@@ -453,7 +457,7 @@ fun ExpressiveMiniPlayer(
                         }
                     },
                     onDragCancel = {
-                        HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                        playerHaptic(HapticType.LIGHT)
                         coroutineScope.launch {
                             carouselOffsetX.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 400f))
                             isUserInteracting = false
@@ -464,7 +468,7 @@ fun ExpressiveMiniPlayer(
                         coroutineScope.launch {
                             carouselOffsetX.snapTo(carouselOffsetX.value + dragAmount)
                             if (abs(carouselOffsetX.value) - abs(lastHapticOffsetX) > swipeHorizontalThreshold / 2) {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                playerHaptic(HapticType.LIGHT)
                                 lastHapticOffsetX = carouselOffsetX.value
                             }
                         }
@@ -475,25 +479,25 @@ fun ExpressiveMiniPlayer(
                     onDragStart = {
                         isUserInteracting = true
                         lastHapticOffset = 0f
-                        HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                        playerHaptic(HapticType.LIGHT)
                     },
                     onDragEnd = {
                         if (carouselOffsetY.value < -swipeUpThreshold) {
-                            HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                            playerHaptic(HapticType.HEAVY)
                             onPlayerClick()
                             coroutineScope.launch {
                                 carouselOffsetY.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 400f))
                                 isUserInteracting = false
                             }
                         } else if (carouselOffsetY.value > swipeDownThreshold) {
-                            HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                            playerHaptic(HapticType.HEAVY)
                             isDismissingPlayer = true
                             coroutineScope.launch {
                                 carouselOffsetY.animateTo(500f, tween(150))
                                 handleDismiss()
                             }
                         } else {
-                            HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                            playerHaptic(HapticType.LIGHT)
                             coroutineScope.launch {
                                 carouselOffsetY.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 400f))
                                 isUserInteracting = false
@@ -501,7 +505,7 @@ fun ExpressiveMiniPlayer(
                         }
                     },
                     onDragCancel = {
-                        HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                        playerHaptic(HapticType.LIGHT)
                         coroutineScope.launch {
                             carouselOffsetY.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 400f))
                             isUserInteracting = false
@@ -512,7 +516,7 @@ fun ExpressiveMiniPlayer(
                         coroutineScope.launch {
                             carouselOffsetY.snapTo(carouselOffsetY.value + dragAmount)
                             if (abs(carouselOffsetY.value) - abs(lastHapticOffset) > swipeUpThreshold / 2) {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                playerHaptic(HapticType.LIGHT)
                                 lastHapticOffset = carouselOffsetY.value
                             }
                         }
@@ -525,7 +529,7 @@ fun ExpressiveMiniPlayer(
             indication = null,
             onClick = {
                 if (!isDismissingPlayer && !isCarouselFlinging) {
-                    HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                    playerHaptic(HapticType.HEAVY)
                     onPlayerClick()
                 }
             }
@@ -587,7 +591,7 @@ fun ExpressiveMiniPlayer(
                             IconButton(
                                 onClick = {
                                     isUserInteracting = true
-                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                    playerHaptic(HapticType.LIGHT)
                                     handleSkipPrevious()
                                     isUserInteracting = false
                                 },
@@ -604,7 +608,7 @@ fun ExpressiveMiniPlayer(
                             MorphingPlayPauseButton(
                                 isPlaying = isPlaying,
                                 onClick = {
-                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                                    playerHaptic(HapticType.HEAVY)
                                     onPlayPause()
                                 },
                                 size = 44.dp,
@@ -615,7 +619,7 @@ fun ExpressiveMiniPlayer(
                             IconButton(
                                 onClick = {
                                     isUserInteracting = true
-                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                    playerHaptic(HapticType.LIGHT)
                                     handleSkipNext()
                                     isUserInteracting = false
                                 },
@@ -672,7 +676,7 @@ fun ExpressiveMiniPlayer(
                         MorphingPlayPauseButton(
                             isPlaying = isPlaying,
                             onClick = {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                                playerHaptic(HapticType.HEAVY)
                                 onPlayPause()
                             },
                             size = 56.dp,

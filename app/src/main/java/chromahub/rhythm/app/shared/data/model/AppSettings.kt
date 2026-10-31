@@ -622,6 +622,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_PLAYER_PROGRESS_STYLE = "player_progress_style" // "NORMAL", "WAVY", "ROUNDED", "THIN", "THICK"
         private const val KEY_PLAYER_PROGRESS_THUMB_STYLE = "player_progress_thumb_style" // "NONE", "DEFAULT", "CIRCLE", "SQUARE", "PILL", "DIAMOND", "FLOWER", "HEART", "COOKIE", "PUFFY"
         private const val KEY_PLAYER_PROGRESS_THUMB_ROTATE = "player_progress_thumb_rotate" // Boolean
+        private const val KEY_PLAYER_HAPTICS = "player_haptics" // Boolean, default off
         
         // MiniPlayer Customization Settings
         private const val KEY_MINIPLAYER_PROGRESS_STYLE = "miniplayer_progress_style" // "NORMAL", "WAVY", "ROUNDED", "THIN", "GRADIENT"
@@ -6444,6 +6445,14 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     fun setPlayerProgressThumbRotate(value: Boolean) {
         _playerProgressThumbRotate.value = value
         prefs.edit { putBoolean(KEY_PLAYER_PROGRESS_THUMB_ROTATE, value) }
+    }
+
+    // Vibration feedback for player controls and seek bar. Off by default.
+    private val _playerHaptics = MutableStateFlow(prefs.getBoolean(KEY_PLAYER_HAPTICS, false))
+    val playerHaptics: StateFlow<Boolean> = _playerHaptics.asStateFlow()
+    fun setPlayerHaptics(value: Boolean) {
+        _playerHaptics.value = value
+        prefs.edit { putBoolean(KEY_PLAYER_HAPTICS, value) }
     }
 
     // Player artwork rotation while playing

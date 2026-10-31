@@ -44,6 +44,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -78,6 +79,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import chromahub.rhythm.app.shared.data.model.AppSettings
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.max
 import chromahub.rhythm.app.util.HapticType
@@ -395,6 +397,8 @@ fun StyledProgressBar(
     val density = LocalDensity.current
     val context = LocalContext.current
     val hapticFeedback = LocalHapticFeedback.current
+    val appSettings = remember { AppSettings.getInstance(context) }
+    val playerHaptics by appSettings.playerHaptics.collectAsState()
 
     val latestOnSeek by rememberUpdatedState(onSeek)
     val latestOnSeekFinished by rememberUpdatedState(onSeekFinished)
@@ -457,7 +461,7 @@ fun StyledProgressBar(
     }
 
     val gestureModifier = if (onSeek != null && enabled) {
-        Modifier.pointerInput(enabled, trackEdgePaddingPx) {
+        Modifier.pointerInput(enabled, trackEdgePaddingPx, playerHaptics) {
             fun valueForX(rawX: Float): Float {
                 val edgePadding = trackEdgePaddingPx.coerceIn(0f, size.width / 2f)
                 val trackStart = edgePadding
@@ -474,7 +478,9 @@ fun StyledProgressBar(
                     var latestGestureValue = valueForX(down.position.x)
                     latestOnSeek?.invoke(latestGestureValue)
                     lastHapticValue = (latestGestureValue * 100).roundToInt()
-                    HapticUtils.performHapticFeedback(context, hapticFeedback, HapticType.LIGHT)
+                    if (playerHaptics) {
+                        HapticUtils.performHapticFeedback(context, hapticFeedback, HapticType.LIGHT)
+                    }
 
                     var pointerId = down.id
                     while (true) {
@@ -494,7 +500,7 @@ fun StyledProgressBar(
                             latestGestureValue = valueForX(change.position.x)
                             latestOnSeek?.invoke(latestGestureValue)
                             val newTick = (latestGestureValue * 100).roundToInt()
-                            if (newTick != lastHapticValue) {
+                            if (playerHaptics && newTick != lastHapticValue) {
                                 HapticUtils.performHapticFeedback(context, hapticFeedback, HapticType.LIGHT)
                                 lastHapticValue = newTick
                             }

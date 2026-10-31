@@ -25,6 +25,7 @@ import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.lerp
 import kotlinx.coroutines.isActive
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import chromahub.rhythm.app.shared.data.model.AppSettings
 import chromahub.rhythm.app.ui.theme.PlayerProgressColor
 import chromahub.rhythm.app.util.HapticUtils
 import chromahub.rhythm.app.util.HapticType
@@ -92,6 +94,8 @@ fun WaveSlider(
     val density = LocalDensity.current
     val context = LocalContext.current
     val hapticFeedback = LocalHapticFeedback.current
+    val appSettings = remember { AppSettings.getInstance(context) }
+    val playerHaptics by appSettings.playerHaptics.collectAsState()
     val strokeWidthPx = with(density) { strokeWidth.toPx() }
     val thumbRadiusPx = with(density) { thumbRadius.toPx() }
     val trackEdgePaddingPx = with(density) { trackEdgePadding.coerceAtLeast(0.dp).toPx() }
@@ -228,7 +232,7 @@ fun WaveSlider(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(enabled, valueRange, trackEdgePaddingPx) {
+                .pointerInput(enabled, valueRange, trackEdgePaddingPx, playerHaptics) {
                     if (!enabled) return@pointerInput
 
                     fun valueForX(rawX: Float): Float {
@@ -248,7 +252,9 @@ fun WaveSlider(
                             var latestGestureValue = valueForX(down.position.x)
                             latestOnValueChange(latestGestureValue)
                             lastHapticValue = latestGestureValue.roundToInt()
-                            HapticUtils.performHapticFeedback(context, hapticFeedback, HapticType.LIGHT)
+                            if (playerHaptics) {
+                                HapticUtils.performHapticFeedback(context, hapticFeedback, HapticType.LIGHT)
+                            }
 
                             var pointerId = down.id
                             while (true) {
@@ -268,7 +274,7 @@ fun WaveSlider(
                                     latestGestureValue = valueForX(change.position.x)
                                     latestOnValueChange(latestGestureValue)
                                     val newTick = latestGestureValue.roundToInt()
-                                    if (newTick != lastHapticValue) {
+                                    if (playerHaptics && newTick != lastHapticValue) {
                                         HapticUtils.performHapticFeedback(context, hapticFeedback, HapticType.LIGHT)
                                         lastHapticValue = newTick
                                     }

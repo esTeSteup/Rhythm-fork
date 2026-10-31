@@ -3182,4 +3182,7 @@
 <string name="licenses_desc_vivi_music">不止是音乐 — 你的终极音频体验</string>
 <string name="licenses_desc_workmanager">可延迟的异步任务管理库</string>
 <string name="licenses_desc_zenith">一款 Material Design 3 表达性数字健康应用</string>
+
+    <string name="settings_player_haptics">播放器震动</string>
+    <string name="settings_player_haptics_desc">播放控制、拖动进度条时震动（默认关闭）</string>
 </resources>

@@ -1531,6 +1531,8 @@
     <string name="settings_thumb_style">Thumb Style</string>
     <string name="settings_thumb_rotate">Rotate Thumb While Playing</string>
     <string name="settings_thumb_rotate_desc">Slowly spins the thumb while music is playing</string>
+    <string name="settings_player_haptics">Player Haptics</string>
+    <string name="settings_player_haptics_desc">Vibrate for playback controls and the progress bar (off by default)</string>
     <string name="settings_artwork_rotate">Rotate Album Art While Playing</string>
     <string name="settings_artwork_rotate_desc">Slowly spins the album cover while music is playing</string>
     <string name="settings_artwork_rotate_circular">Fixed Circular Vinyl/CD Frame</string>
