@@ -9777,7 +9777,12 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             currentSongPlayCounts[song.id] = playCount
             _songPlayCounts.value = currentSongPlayCounts
             appSettings.setSongPlayCounts(currentSongPlayCounts)
-            
+
+            // Timestamped start event for the range-filtered RhythmStats tabs.
+            viewModelScope.launch(Dispatchers.IO) {
+                playbackStatsRepository.recordPlayStart(song)
+            }
+
             try {
                 populateMostPlayedPlaylist()
             } catch (e: Exception) {

@@ -76,7 +76,10 @@ class PlaybackStatsRepository internal constructor(
     private val gson = Gson()
     private val historyFile = historyFileOverride ?: File(context.applicationContext.filesDir, "playback_history.json")
     private val memoryLock = Any()
+    private val playStartsFile = File(context.applicationContext.filesDir, "play_starts.json")
+    private val fileLock = Any()
     private val eventsType = object : TypeToken<MutableList<PlaybackEvent>>() {}.type
+    private val playStartsType = object : TypeToken<MutableList<PlayStartEvent>>() {}.type
     
     private val ioScope = coroutineScopeOverride ?: CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val saveChannel = Channel<List<PlaybackEvent>>(Channel.CONFLATED)
@@ -138,6 +141,19 @@ class PlaybackStatsRepository internal constructor(
     /**
      * Playback event data class
      */
+    /**
+     * One "playback started" event. The song list and RhythmStats both use these for
+     * range-filtered play counts; All Time counts come from AppSettings.songPlayCounts.
+     */
+    data class PlayStartEvent(
+        val songId: String,
+        val timestamp: Long,
+        val songTitle: String? = null,
+        val artistName: String? = null,
+        val albumName: String? = null,
+        val genre: String? = null
+    )
+
     data class PlaybackEvent(
         val songId: String,
         val timestamp: Long,
@@ -347,6 +363,29 @@ class PlaybackStatsRepository internal constructor(
     }
     
     /**
+     * Record a lifetime "playback started" event, used for range-filtered play counts.
+     */
+    fun recordPlayStart(song: Song, timestamp: Long = System.currentTimeMillis()) {
+        if (song.id.isBlank()) return
+        synchronized(fileLock) {
+            val starts = readPlayStartsLocked().toMutableList()
+            val cutoff = timestamp - MAX_HISTORY_AGE_MS
+            if (cutoff > 0) {
+                starts.removeAll { it.timestamp < cutoff }
+            }
+            starts += PlayStartEvent(
+                songId = song.id,
+                timestamp = timestamp,
+                songTitle = song.title,
+                artistName = song.artist,
+                albumName = song.album,
+                genre = song.genre
+            )
+            writePlayStartsLocked(starts)
+        }
+    }
+
+    /**
      * Record playback with simple duration tracking (for simpler integration)
      */
     fun recordSimplePlayback(
@@ -410,7 +449,27 @@ class PlaybackStatsRepository internal constructor(
         
         // Build song map for lookups
         val songMap = songs.associateBy { it.id }
-        
+
+        // Play counts in the song list / playlists are lifetime "play started" counters.
+        // All Time uses those exact totals; the range tabs count timestamped start events
+        // recorded by MusicViewModel when the same counter is incremented.
+        val startPlayCounts = runCatching {
+            chromahub.rhythm.app.shared.data.model.AppSettings.getInstance(context).songPlayCounts.value
+        }.getOrDefault(emptyMap())
+        val allStartEvents = readPlayStarts()
+        val rangeStartEvents = allStartEvents.filter { event ->
+            val lowerBound = startBound ?: Long.MIN_VALUE
+            event.timestamp >= lowerBound && event.timestamp <= endBound
+        }
+        val playCounts = if (range == StatsTimeRange.ALL_TIME) {
+            startPlayCounts
+        } else {
+            rangeStartEvents.groupingBy { it.songId }.eachCount()
+        }
+        val startEventBySong = (if (range == StatsTimeRange.ALL_TIME) allStartEvents else rangeStartEvents)
+            .groupBy { it.songId }
+            .mapValues { (_, events) -> events.first() }
+
         // Group events by song
         val eventsBySong = filteredEvents.groupBy { it.songId }
         
@@ -418,7 +477,8 @@ class PlaybackStatsRepository internal constructor(
         val segmentsBySong = eventsBySong.mapValues { (_, events) ->
             mergeSongEvents(events)
         }
-        
+        val allSongIds = (segmentsBySong.keys + playCounts.keys).toSet()
+
         // Calculate overall spans (merge across songs for total listening time)
         val allSpans = segmentsBySong.values.flatten().map { 
             PlaybackSpan(it.startMillis, it.endMillis) 
@@ -429,8 +489,8 @@ class PlaybackStatsRepository internal constructor(
         val effectiveEnd = mergedSpans.maxOfOrNull { it.endMillis } ?: endBound
         
         val totalDuration = mergedSpans.sumOf { it.durationMs }
-        val totalPlays = segmentsBySong.values.sumOf { it.size }
-        val uniqueSongsCount = segmentsBySong.keys.size
+        val totalPlays = playCounts.values.sum()
+        val uniqueSongsCount = playCounts.keys.size
         
         // Calculate day span for averages
         val daySpan = if (startBound != null) {
@@ -443,19 +503,23 @@ class PlaybackStatsRepository internal constructor(
         val averageDailyDuration = if (daySpan > 0) totalDuration / daySpan else totalDuration
         
         // Top songs
-        val topSongs = segmentsBySong.mapNotNull { (songId, segments) ->
+        val topSongs = allSongIds.mapNotNull { songId ->
+            val segments = segmentsBySong[songId].orEmpty()
+            val playCount = playCounts[songId] ?: 0
+            if (segments.isEmpty() && playCount == 0) return@mapNotNull null
             val song = songMap[songId]
+            val startEvent = startEventBySong[songId]
             val event = filteredEvents.find { it.songId == songId }
-            val title = song?.title ?: event?.songTitle ?: "Unknown"
-            val artist = song?.artist ?: event?.artistName ?: "Unknown Artist"
-            
+            val title = song?.title ?: startEvent?.songTitle ?: event?.songTitle ?: "Unknown"
+            val artist = song?.artist ?: startEvent?.artistName ?: event?.artistName ?: "Unknown Artist"
+
             SongPlaybackSummary(
                 songId = songId,
                 title = title,
                 artist = artist,
                 albumArtUri = song?.artworkUri?.toString(),
                 totalDurationMs = segments.sumOf { it.durationMs },
-                playCount = segments.size
+                playCount = playCount
             )
         }.sortedByDescending { it.totalDurationMs }.take(5)
         
@@ -467,8 +531,10 @@ class PlaybackStatsRepository internal constructor(
         val artistPlayCounts = mutableMapOf<String, Int>()
         val artistSongSets = mutableMapOf<String, MutableSet<String>>()
 
-        segmentsBySong.forEach { (songId, segments) ->
+        allSongIds.forEach { songId ->
+            val segments = segmentsBySong[songId].orEmpty()
             val rawArtist = songMap[songId]?.artist
+                ?: startEventBySong[songId]?.artistName
                 ?: filteredEvents.find { it.songId == songId }?.artistName
             val resolvedArtists = if (rawArtist.isNullOrBlank()) {
                 listOf("Unknown Artist")
@@ -480,7 +546,7 @@ class PlaybackStatsRepository internal constructor(
                 ).ifEmpty { listOf(rawArtist.trim()) }
             }
             val songDuration = segments.sumOf { it.durationMs }
-            val songPlayCount = segments.size
+            val songPlayCount = playCounts[songId] ?: 0
 
             resolvedArtists.forEach { artist ->
                 artistDurations[artist] = artistDurations.getOrDefault(artist, 0L) + songDuration
@@ -501,20 +567,21 @@ class PlaybackStatsRepository internal constructor(
         val uniqueArtistsCount = artistDurations.keys.size
         
         // Top albums
-        val albumGroups = segmentsBySong.entries.groupBy { (songId, _) ->
-            songMap[songId]?.album 
-                ?: filteredEvents.find { it.songId == songId }?.albumName 
+        val albumGroups = allSongIds.groupBy { songId ->
+            songMap[songId]?.album
+                ?: startEventBySong[songId]?.albumName
+                ?: filteredEvents.find { it.songId == songId }?.albumName
                 ?: "Unknown Album"
         }
-        val topAlbums = albumGroups.map { (album, songEntries) ->
-            val allSegments = songEntries.flatMap { it.value }
-            val firstSong = songEntries.firstOrNull()?.let { songMap[it.key] }
+        val topAlbums = albumGroups.map { (album, songIds) ->
+            val allSegments = songIds.flatMap { segmentsBySong[it].orEmpty() }
+            val firstSong = songIds.firstOrNull()?.let { songMap[it] }
             AlbumPlaybackSummary(
                 album = album,
                 albumArtUri = firstSong?.artworkUri?.toString(),
                 totalDurationMs = allSegments.sumOf { it.durationMs },
-                playCount = allSegments.size,
-                uniqueSongs = songEntries.size
+                playCount = songIds.sumOf { playCounts[it] ?: 0 },
+                uniqueSongs = songIds.size
             )
         }.sortedByDescending { it.totalDurationMs }.take(5)
         
@@ -522,12 +589,14 @@ class PlaybackStatsRepository internal constructor(
         val genreDurations = mutableMapOf<String, Long>()
         val genrePlayCounts = mutableMapOf<String, Int>()
 
-        segmentsBySong.forEach { (songId, segments) ->
+        allSongIds.forEach { songId ->
+            val segments = segmentsBySong[songId].orEmpty()
             val rawGenre = songMap[songId]?.genre
+                ?: startEventBySong[songId]?.genre
                 ?: filteredEvents.find { it.songId == songId }?.genre
             val resolvedGenres = GenreUtils.splitGenres(rawGenre).ifEmpty { listOf("Unknown") }
             val songDuration = segments.sumOf { it.durationMs }
-            val songPlayCount = segments.size
+            val songPlayCount = playCounts[songId] ?: 0
 
             resolvedGenres.forEach { genre ->
                 genreDurations[genre] = genreDurations.getOrDefault(genre, 0L) + songDuration
@@ -675,7 +744,16 @@ class PlaybackStatsRepository internal constructor(
         // Merge overlapping segments
         val segments = mergeSongEvents(songEvents)
         val totalDuration = segments.sumOf { it.durationMs }
-        val playCount = segments.size
+        // Keep the reported play count identical to the song list / playlist counter.
+        val playCount = if (range == StatsTimeRange.ALL_TIME) {
+            runCatching {
+                chromahub.rhythm.app.shared.data.model.AppSettings.getInstance(context)
+                    .songPlayCounts.value[songId]
+            }.getOrNull() ?: segments.size
+        } else {
+            val lowerBound = startBound ?: Long.MIN_VALUE
+            readPlayStarts().count { it.songId == songId && it.timestamp in lowerBound..endBound }
+        }
         
         // Get song info from the first event
         val firstEvent = songEvents.first()
@@ -761,6 +839,14 @@ class PlaybackStatsRepository internal constructor(
             inMemoryEvents.clear()
             isLoaded = true
         }
+        synchronized(fileLock) {
+            if (historyFile.exists()) {
+                historyFile.delete()
+            }
+            if (playStartsFile.exists()) {
+                playStartsFile.delete()
+            }
+        }
         _statsSummary.value = null
         ioScope.launch {
             runCatching {
@@ -774,9 +860,9 @@ class PlaybackStatsRepository internal constructor(
             }
         }
     }
-    
+
     // Private helper methods
-    
+
     private fun ensureLoadedFromDisk() {
         if (isLoaded) return
         synchronized(memoryLock) {
@@ -787,7 +873,61 @@ class PlaybackStatsRepository internal constructor(
             isLoaded = true
         }
     }
-    
+
+    private fun readPlayStarts(): List<PlayStartEvent> = synchronized(fileLock) {
+        readPlayStartsLocked()
+    }
+
+    private fun readPlayStartsLocked(): MutableList<PlayStartEvent> {
+        if (!playStartsFile.exists()) {
+            return seedPlayStartsFromHistoryLocked()
+        }
+        val raw = runCatching { playStartsFile.readText() }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: return mutableListOf()
+        return runCatching {
+            gson.fromJson<MutableList<PlayStartEvent>>(raw, playStartsType) ?: mutableListOf()
+        }.getOrElse { mutableListOf() }
+    }
+
+    /**
+     * Existing playback history predates start events. Seed an approximate start log from it
+     * once so range tabs have historical data; future starts are recorded exactly.
+     */
+    private fun seedPlayStartsFromHistoryLocked(): MutableList<PlayStartEvent> {
+        val cutoff = System.currentTimeMillis() - MAX_HISTORY_AGE_MS
+        val lastBySong = mutableMapOf<String, Long>()
+        val seeded = mutableListOf<PlayStartEvent>()
+        readEvents()
+            .filter { it.endMillis() >= cutoff }
+            .sortedBy { it.startMillis() }
+            .forEach { event ->
+                val timestamp = event.startMillis()
+                val last = lastBySong[event.songId]
+                // Match PlayCountDeduplicator's 2s window to avoid duplicate ViewModel reports.
+                if (last == null || timestamp - last >= 2_000L) {
+                    seeded.add(
+                        PlayStartEvent(
+                            songId = event.songId,
+                            timestamp = timestamp,
+                            songTitle = event.songTitle,
+                            artistName = event.artistName,
+                            albumName = event.albumName,
+                            genre = event.genre
+                        )
+                    )
+                    lastBySong[event.songId] = timestamp
+                }
+            }
+        writePlayStartsLocked(seeded)
+        return seeded
+    }
+
+    private fun writePlayStartsLocked(starts: List<PlayStartEvent>) {
+        runCatching { playStartsFile.writeText(gson.toJson(starts)) }
+    }
+
     private fun readEvents(): List<PlaybackEvent> {
         ensureLoadedFromDisk()
         return synchronized(memoryLock) {

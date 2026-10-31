@@ -225,6 +225,7 @@ fun SongInfoBottomSheet(
     val isLandscapeTablet = isTablet && windowScreenWidthDp() > windowScreenHeightDp()
     
     val useHoursFormat by appSettings.useHoursInTimeFormat.collectAsState()
+    val songPlayCounts by appSettings.songPlayCounts.collectAsState()
     
     var currentSong by remember(song?.id) { mutableStateOf(song) }
     
@@ -757,6 +758,7 @@ fun SongInfoBottomSheet(
                                         item {
                                             RhythmStatsCard(
                                                 songPlaybackStats = songPlaybackStats,
+                                                playCountOverride = (currentSong ?: song).id.let { songPlayCounts[it] },
                                                 useHoursFormat = useHoursFormat,
                                                 isLoading = isLoadingStats
                                             )
@@ -1006,6 +1008,7 @@ fun SongInfoBottomSheet(
             item {
                 RhythmStatsCard(
                     songPlaybackStats = songPlaybackStats,
+                    playCountOverride = displaySong.id.let { songPlayCounts[it] },
                     useHoursFormat = useHoursFormat,
                     isLoading = isLoadingStats
                 )
@@ -1257,15 +1260,17 @@ private fun SongInfoCard(
 @Composable
 private fun RhythmStatsCard(
     songPlaybackStats: chromahub.rhythm.app.shared.data.repository.PlaybackStatsRepository.SongPlaybackSummary?,
+    playCountOverride: Int? = null,
     useHoursFormat: Boolean = false,
     isLoading: Boolean = false
 ) {
     val context = LocalContext.current
     val rhythmStatsItems = buildList {
+        val playCount = playCountOverride ?: songPlaybackStats?.playCount ?: 0
+        if (playCount > 0) {
+            add(MetadataItem(context.getString(R.string.metadata_play_count), playCount.toString(), RhythmIcons.Play))
+        }
         songPlaybackStats?.let { stats ->
-            if (stats.playCount > 0) {
-                add(MetadataItem(context.getString(R.string.metadata_play_count), stats.playCount.toString(), RhythmIcons.Play))
-            }
             if (stats.totalDurationMs > 0) {
                 add(MetadataItem(context.getString(R.string.metadata_total_played), formatDuration(stats.totalDurationMs, useHoursFormat), RhythmIcons.AccessTime))
             }
