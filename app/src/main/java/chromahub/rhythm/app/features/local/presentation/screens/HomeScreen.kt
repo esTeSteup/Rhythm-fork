@@ -960,7 +960,8 @@ private fun StreamingHomeBody(
                 heightSizeClass = heightSizeClass,
                 onPlayAlbum = { album ->
                     playQueueFromMapped(album.songs, 0, false)
-                }
+                },
+                musicViewModel = musicViewModel
             )
         }
 
@@ -1051,7 +1052,8 @@ private fun StreamingHomeBody(
                                         heightSizeClass = heightSizeClass,
                                         onPlayClick = { clickedAlbum ->
                                             playQueueFromMapped(clickedAlbum.songs, 0, false)
-                                        }
+                                        },
+                                        musicViewModel = musicViewModel
                                     )
                                 }
                             }
@@ -1093,7 +1095,8 @@ private fun StreamingHomeBody(
                                         heightSizeClass = heightSizeClass,
                                         onPlayClick = { clickedArtist ->
                                             playQueueFromMapped(clickedArtist.songs, 0, false)
-                                        }
+                                        },
+                                        musicViewModel = musicViewModel
                                     )
                                 }
                             }
@@ -1138,7 +1141,7 @@ private fun StreamingHomeBody(
                 }
                 "STATS", "RHYTHM_STATS" -> {
                     if (!isSyncing && hasStreamingContent && showRhythmStatsSection) {
-                        ModernListeningStatsSection(onClick = onNavigateToStats)
+                        ModernListeningStatsSection(onClick = onNavigateToStats, musicViewModel = musicViewModel)
                     }
                 }
             }
@@ -1594,7 +1597,8 @@ private fun ModernScrollableContent(
                                 onArtistClick = onArtistClick,
                                 onViewAllArtists = onViewAllArtists,
                                 widthSizeClass = widthSizeClass,
-                                heightSizeClass = heightSizeClass
+                                heightSizeClass = heightSizeClass,
+                                musicViewModel = musicViewModel
                             )
                         } else {
                             Column {
@@ -1662,7 +1666,8 @@ private fun ModernScrollableContent(
                                             album = album,
                                             onClick = { onAlbumClick(album) },
                                             widthSizeClass = widthSizeClass,
-                                            heightSizeClass = heightSizeClass
+                                            heightSizeClass = heightSizeClass,
+                                            musicViewModel = musicViewModel
                                         )
                                     }
                                 }
@@ -1715,7 +1720,8 @@ private fun ModernScrollableContent(
                                             album = album,
                                             onClick = { onAlbumClick(album) },
                                             widthSizeClass = widthSizeClass,
-                                            heightSizeClass = heightSizeClass
+                                            heightSizeClass = heightSizeClass,
+                                            musicViewModel = musicViewModel
                                         )
                                     }
                                 }
@@ -1801,7 +1807,7 @@ private fun ModernScrollableContent(
                 }
                 "STATS" -> {
                     if (showListeningStats) {
-                        ModernListeningStatsSection(onClick = onNavigateToStats)
+                        ModernListeningStatsSection(onClick = onNavigateToStats, musicViewModel = musicViewModel)
                     }
                 }
             }
@@ -1831,7 +1837,8 @@ private fun ModernScrollableContent(
                             showPlayButton = discoverShowPlayButton,
                             showGradient = discoverShowGradient,
                             widthSizeClass = widthSizeClass,
-                            heightSizeClass = heightSizeClass
+                            heightSizeClass = heightSizeClass,
+                            musicViewModel = musicViewModel
                         )
                     } else {
                         Box(modifier = Modifier.padding(horizontal = horizontalPadding)) {
@@ -1894,7 +1901,8 @@ private fun ModernScrollableContent(
                                             showPlayButton = discoverShowPlayButton,
                                             showGradient = discoverShowGradient,
                                             widthSizeClass = widthSizeClass,
-                                            heightSizeClass = heightSizeClass
+                                            heightSizeClass = heightSizeClass,
+                                            musicViewModel = musicViewModel
                                         )
                                     } else {
                                         Box(modifier = Modifier.padding(horizontal = horizontalPadding)) {
@@ -2237,11 +2245,11 @@ private fun ModernFeaturedSection(
     showGradient: Boolean = true,
     widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
     heightSizeClass: WindowHeightSizeClass = WindowHeightSizeClass.Medium,
-    onPlayAlbum: ((Album) -> Unit)? = null
+    onPlayAlbum: ((Album) -> Unit)? = null,
+    musicViewModel: chromahub.rhythm.app.viewmodel.MusicViewModel
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
-    val viewModel = viewModel<chromahub.rhythm.app.viewmodel.MusicViewModel>()
 
     val screenWidth = windowScreenWidthDp().dp
     val isTablet = widthSizeClass != WindowWidthSizeClass.Compact
@@ -2392,7 +2400,7 @@ private fun ModernFeaturedSection(
                                     Button(
                                         onClick = {
                                             HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
-                                            if (onPlayAlbum != null) onPlayAlbum(album) else viewModel.playAlbum(album)
+                                            if (onPlayAlbum != null) onPlayAlbum(album) else musicViewModel.playAlbum(album)
                                         },
                                         shape = RoundedCornerShape(percent = 50),
                                         colors = ButtonDefaults.buttonColors(
@@ -2569,7 +2577,7 @@ private fun ModernFeaturedSection(
                                 Button(
                                     onClick = {
                                         HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
-                                        if (onPlayAlbum != null) onPlayAlbum(album) else viewModel.playAlbum(album)
+                                        if (onPlayAlbum != null) onPlayAlbum(album) else musicViewModel.playAlbum(album)
                                     },
                                     shape = RoundedCornerShape(percent = 50),
                                     colors = ButtonDefaults.buttonColors(
@@ -2623,7 +2631,8 @@ private fun ModernArtistsSection(
     onArtistClick: (Artist) -> Unit,
     onViewAllArtists: () -> Unit,
     widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
-    heightSizeClass: WindowHeightSizeClass = WindowHeightSizeClass.Medium
+    heightSizeClass: WindowHeightSizeClass = WindowHeightSizeClass.Medium,
+    musicViewModel: chromahub.rhythm.app.viewmodel.MusicViewModel
 ) {
     val context = LocalContext.current
     Column {
@@ -2655,7 +2664,8 @@ private fun ModernArtistsSection(
                     songs = songs,
                     onClick = { onArtistClick(artist) },
                     widthSizeClass = widthSizeClass,
-                    heightSizeClass = heightSizeClass
+                    heightSizeClass = heightSizeClass,
+                    musicViewModel = musicViewModel
                 )
             }
         }
@@ -2669,12 +2679,12 @@ private fun ModernArtistCard(
     onClick: () -> Unit,
     widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
     heightSizeClass: WindowHeightSizeClass = WindowHeightSizeClass.Medium,
-    onPlayClick: ((Artist) -> Unit)? = null
+    onPlayClick: ((Artist) -> Unit)? = null,
+    musicViewModel: chromahub.rhythm.app.viewmodel.MusicViewModel
 ) {
     val context = LocalContext.current
-    val viewModel = viewModel<chromahub.rhythm.app.viewmodel.MusicViewModel>()
     val haptic = LocalHapticFeedback.current
-    val handleArtistPlayClick = onPlayClick ?: { artistToPlay -> viewModel.playArtist(artistToPlay) }
+    val handleArtistPlayClick = onPlayClick ?: { artistToPlay -> musicViewModel.playArtist(artistToPlay) }
 
     val cardSize = when (widthSizeClass) {
         WindowWidthSizeClass.Compact -> when (heightSizeClass) {
@@ -2755,12 +2765,12 @@ private fun ModernAlbumCard(
     onClick: (Album) -> Unit,
     widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
     heightSizeClass: WindowHeightSizeClass = WindowHeightSizeClass.Medium,
-    onPlayClick: ((Album) -> Unit)? = null
+    onPlayClick: ((Album) -> Unit)? = null,
+    musicViewModel: chromahub.rhythm.app.viewmodel.MusicViewModel
 ) {
     val context = LocalContext.current
-    val viewModel = viewModel<chromahub.rhythm.app.viewmodel.MusicViewModel>()
     val haptic = LocalHapticFeedback.current
-    val handlePlayClick = onPlayClick ?: { albumToPlay -> viewModel.playAlbum(albumToPlay) }
+    val handlePlayClick = onPlayClick ?: { albumToPlay -> musicViewModel.playAlbum(albumToPlay) }
 
     val (cardWidth, cardHeight) = when (widthSizeClass) {
         WindowWidthSizeClass.Compact -> when (heightSizeClass) {
@@ -2915,16 +2925,16 @@ private fun ModernAlbumCard(
 
 @Composable
 private fun ModernListeningStatsSection(
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    musicViewModel: chromahub.rhythm.app.viewmodel.MusicViewModel
 ) {
     val context = LocalContext.current
-    val viewModel = viewModel<chromahub.rhythm.app.viewmodel.MusicViewModel>()
-    val songs by viewModel.songs.collectAsState()
+    val songs by musicViewModel.songs.collectAsState()
 
     var statsSummary by remember { mutableStateOf<chromahub.rhythm.app.shared.data.repository.PlaybackStatsRepository.PlaybackStatsSummary?>(null) }
 
     LaunchedEffect(songs) {
-        statsSummary = viewModel.loadPlaybackStats(chromahub.rhythm.app.shared.data.repository.StatsTimeRange.ALL_TIME)
+        statsSummary = musicViewModel.loadPlaybackStats(chromahub.rhythm.app.shared.data.repository.StatsTimeRange.ALL_TIME)
     }
 
     val listeningTimeHours = remember(statsSummary) {

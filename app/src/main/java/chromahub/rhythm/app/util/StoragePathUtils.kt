@@ -21,6 +21,17 @@ import java.util.Locale
  */
 object StoragePathUtils {
     private const val TAG = "StoragePathUtils"
+    private const val EMULATED_ROOT = "/storage/emulated/0"
+
+    // Cache the external storage root: Environment.getExternalStorageDirectory() is called
+    // for every song while filtering the library.
+    private val externalStorageRoot: String by lazy {
+        try {
+            Environment.getExternalStorageDirectory()?.absolutePath
+        } catch (_: Exception) {
+            null
+        } ?: EMULATED_ROOT
+    }
 
     /**
      * Resolves an Android Storage Access Framework (SAF) tree URI into a local filesystem path.
@@ -226,11 +237,22 @@ object StoragePathUtils {
             normalized = normalized.substring(4).trim()
         }
 
+        // Fast path for the common, already-clean /storage/emulated/0/... form. This runs
+        // once per library song during startup filtering, so avoid the canonicalPath work.
+        if (normalized.startsWith("$EMULATED_ROOT/") &&
+            !normalized.contains("//") &&
+            !normalized.startsWith("$EMULATED_ROOT$EMULATED_ROOT") &&
+            !normalized.startsWith("$EMULATED_ROOT/$EMULATED_ROOT") &&
+            !normalized.endsWith('/')
+        ) {
+            return normalized
+        }
+
         while (normalized.contains("//")) {
             normalized = normalized.replace("//", "/")
         }
 
-        val emulatedPrefix = "/storage/emulated/0"
+        val emulatedPrefix = EMULATED_ROOT
         while (normalized.startsWith("$emulatedPrefix$emulatedPrefix")) {
             normalized = normalized.removePrefix(emulatedPrefix)
         }
@@ -244,9 +266,7 @@ object StoragePathUtils {
         }
 
         try {
-            val externalStorage = try {
-                Environment.getExternalStorageDirectory()?.absolutePath
-            } catch (_: Exception) { null } ?: "/storage/emulated/0"
+            val externalStorage = externalStorageRoot
 
             if (normalized.startsWith("/") && !normalized.startsWith(externalStorage)) {
                 val candidate = File(normalized).canonicalPath
@@ -291,9 +311,26 @@ object StoragePathUtils {
         val normChild = sanitizeAndNormalizePath(childPath)
         val normParents = parentFolders.map { sanitizeAndNormalizePath(it) }.filter { it.isNotEmpty() }
 
-        return normParents.any { normParent ->
-            normParent.equals(normChild, ignoreCase = true) ||
-                normChild.startsWith(if (normParent.endsWith('/')) normParent else "$normParent/", ignoreCase = true)
+        return isNormalizedPathInFolders(normChild, normParents)
+    }
+
+    /**
+     * Pure prefix check for paths and folders that are already normalized. Callers that
+     * normalize once and then test many songs should use this instead of [isPathInFolders]
+     * to avoid re-normalizing both sides for every item.
+     */
+    fun isNormalizedPathInFolders(
+        normalizedChildPath: String?,
+        normalizedParentFolders: Collection<String>
+    ): Boolean {
+        if (normalizedParentFolders.isEmpty() || normalizedChildPath.isNullOrBlank()) return false
+        return normalizedParentFolders.any { normParent ->
+            normParent.isNotEmpty() &&
+                (normParent.equals(normalizedChildPath, ignoreCase = true) ||
+                    normalizedChildPath.startsWith(
+                        if (normParent.endsWith('/')) normParent else "$normParent/",
+                        ignoreCase = true
+                    ))
         }
     }
 

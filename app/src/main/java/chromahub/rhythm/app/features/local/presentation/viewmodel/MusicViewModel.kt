@@ -726,7 +726,8 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                     if (songPath == null) {
                         Log.w(TAG, "Whitelist: could not resolve path for song '${song.title}' (${song.uri}), excluding it")
                     }
-                    shouldInclude = songPath != null && isNormalizedPathInFolders(normalizeStoragePath(songPath), normWhitelistedFolders)
+                    val normalizedPath = songPath?.let { normalizeStoragePath(it) }
+                    shouldInclude = normalizedPath != null && isNormalizedPathInFolders(normalizedPath, normWhitelistedFolders)
                 }
             }
             
@@ -761,7 +762,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun isNormalizedPathInFolders(normChild: String, normFolders: List<String>): Boolean {
-        return StoragePathUtils.isPathInFolders(normChild, normFolders)
+        return StoragePathUtils.isNormalizedPathInFolders(normChild, normFolders)
     }
 
     private fun isFolderSubdirectoryOrEqual(parent: String, child: String): Boolean {
