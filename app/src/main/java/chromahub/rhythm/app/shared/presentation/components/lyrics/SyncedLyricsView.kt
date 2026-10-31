@@ -218,10 +218,38 @@ fun SyncedLyricsView(
         }
     }
 
-    // Find current line index (using adjustedPlaybackTime for sync offset)
-    val currentLineIndex by remember(adjustedPlaybackTime, parsedLyrics) {
+    // Raw line index from the playback position (sync offset already applied)
+    val rawLineIndex by remember(adjustedPlaybackTime, parsedLyrics) {
         derivedStateOf {
             parsedLyrics.indexOfLast { it.timestamp <= adjustedPlaybackTime }
+        }
+    }
+
+    // Playback position updates can step back slightly across a line boundary, which would
+    // briefly move the highlight and auto-scroll back to the previous line. Forward changes
+    // apply immediately; backward changes are only accepted for real seeks.
+    var currentLineIndex by remember { mutableIntStateOf(-1) }
+    var lastLineTimeMs by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(parsedLyrics) {
+        currentLineIndex = -1
+        lastLineTimeMs = 0L
+    }
+    LaunchedEffect(rawLineIndex, adjustedPlaybackTime, parsedLyrics) {
+        if (parsedLyrics.isEmpty()) {
+            currentLineIndex = -1
+            lastLineTimeMs = adjustedPlaybackTime
+            return@LaunchedEffect
+        }
+        if (rawLineIndex >= currentLineIndex) {
+            currentLineIndex = rawLineIndex
+            lastLineTimeMs = adjustedPlaybackTime
+        } else if (adjustedPlaybackTime < lastLineTimeMs - 1_000L) {
+            // Large backward jump: a real seek, not position jitter.
+            currentLineIndex = rawLineIndex
+            lastLineTimeMs = adjustedPlaybackTime
+        } else {
+            // Small backward correction: keep the current line.
+            lastLineTimeMs = maxOf(lastLineTimeMs, adjustedPlaybackTime)
         }
     }
 
@@ -398,8 +426,8 @@ private fun SyncedVocalGapItem(
     val iconScale by animateFloatAsState(
         targetValue = if (isCurrentGap) 1.3f else 1f,
         animationSpec = if (noAnimation) snap() else spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessVeryLow
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
         ),
         label = "syncedGapScale"
     )
@@ -484,7 +512,7 @@ private fun SyncedLyricItem(
             else -> 1f
         },
         animationSpec = if (noAnimation) snap() else spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
+            dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMediumLow
         ),
         label = "lineScale_$index"
@@ -501,7 +529,7 @@ private fun SyncedLyricItem(
             else -> 0.22f
         },
         animationSpec = if (noAnimation) snap() else spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
+            dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMedium
         ),
         label = "lineAlpha_$index"
@@ -511,7 +539,7 @@ private fun SyncedLyricItem(
     val verticalTranslation by animateFloatAsState(
         targetValue = if (isCurrentLine) 0f else if (isPreviousLine) -8f else 0f,
         animationSpec = if (noAnimation) snap() else spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
+            dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMedium
         ),
         label = "lineTranslationY_$index"
@@ -545,7 +573,7 @@ private fun SyncedLyricItem(
         distanceFromCurrent <= 2 -> if (lyricBold) FontWeight.Bold else FontWeight.Medium
         else -> if (lyricBold) FontWeight.SemiBold else FontWeight.Normal
     }
-    
+
     // Subtle letter spacing for emphasis
     val letterSpacing = if (isCurrentLine) 0.05.sp else 0.sp
 

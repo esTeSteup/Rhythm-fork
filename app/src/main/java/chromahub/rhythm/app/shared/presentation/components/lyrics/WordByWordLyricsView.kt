@@ -214,8 +214,8 @@ fun WordByWordLyricsView(
         }
     }
 
-    // Find current line index (among lyric lines only) - using adjustedPlaybackTime for sync offset
-    val currentLineIndex by remember(adjustedPlaybackTime, visibleLyricsLines) {
+    // Raw line index from the playback position (sync offset already applied)
+    val rawLineIndex by remember(adjustedPlaybackTime, visibleLyricsLines) {
         derivedStateOf {
             val lastIndexAtPlayback = visibleLyricsLines.indexOfLast { line ->
                 adjustedPlaybackTime >= line.lineTimestamp
@@ -246,6 +246,34 @@ fun WordByWordLyricsView(
 
                 bestIndex
             }
+        }
+    }
+
+    // Playback position updates can step back slightly across a line boundary, which would
+    // briefly move the highlight and auto-scroll back to the previous line. Forward changes
+    // apply immediately; backward changes are only accepted for real seeks.
+    var currentLineIndex by remember { mutableIntStateOf(-1) }
+    var lastLineTimeMs by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(visibleLyricsLines) {
+        currentLineIndex = -1
+        lastLineTimeMs = 0L
+    }
+    LaunchedEffect(rawLineIndex, adjustedPlaybackTime, visibleLyricsLines) {
+        if (visibleLyricsLines.isEmpty()) {
+            currentLineIndex = -1
+            lastLineTimeMs = adjustedPlaybackTime
+            return@LaunchedEffect
+        }
+        if (rawLineIndex >= currentLineIndex) {
+            currentLineIndex = rawLineIndex
+            lastLineTimeMs = adjustedPlaybackTime
+        } else if (adjustedPlaybackTime < lastLineTimeMs - 1_000L) {
+            // Large backward jump: a real seek, not position jitter.
+            currentLineIndex = rawLineIndex
+            lastLineTimeMs = adjustedPlaybackTime
+        } else {
+            // Small backward correction: keep the current line.
+            lastLineTimeMs = maxOf(lastLineTimeMs, adjustedPlaybackTime)
         }
     }
 
@@ -428,8 +456,8 @@ fun WordByWordLyricsView(
                         val iconScale by animateFloatAsState(
                             targetValue = if (isCurrentGap) 1.3f else 1f,
                             animationSpec = if (lyricNoAnimationVal) snap() else spring<Float>(
-                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                stiffness = Spring.StiffnessVeryLow
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMedium
                             ),
                             label = "iconScale"
                         )
@@ -507,8 +535,8 @@ private fun WordByWordLyricLineItem(
             else -> 1f
         },
         animationSpec = if (noAnimation) snap() else spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessVeryLow
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
         ),
         label = "lineScale"
     )
@@ -523,8 +551,8 @@ private fun WordByWordLyricLineItem(
             else -> 0.22f
         },
         animationSpec = if (noAnimation) snap() else spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "lineOpacity"
     )
@@ -535,8 +563,8 @@ private fun WordByWordLyricLineItem(
             else -> 0f
         },
         animationSpec = if (noAnimation) snap() else spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessVeryLow
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
         ),
         label = "lineTranslation"
     )
