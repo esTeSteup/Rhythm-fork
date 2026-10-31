@@ -4572,6 +4572,41 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        /**
+         * Counts repeat-one loops.
+         *
+         * With crossfade enabled the engine repeats a track by swapping the session player for a
+         * fresh one carrying the same MediaItem, so MediaSession never reports a media item
+         * transition for the restarted play. The only signal the controller gets is the
+         * resulting position jump (end of the track -> 0, same MediaItem), so treat that as a
+         * new play. Native repeat-one also produces this discontinuity; duplicate reports are
+         * deduplicated by PlayCountDeduplicator.
+         */
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int
+        ) {
+            val oldMediaId = oldPosition.mediaItem?.mediaId
+            val newMediaId = newPosition.mediaItem?.mediaId
+            val isRepeatLoop =
+                reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION &&
+                    !isRestoringQueue &&
+                    oldMediaId != null &&
+                    oldMediaId == newMediaId &&
+                    oldPosition.positionMs > newPosition.positionMs + 1_000L
+            if (!isRepeatLoop) return
+
+            val song = _currentSong.value?.takeIf { it.id == newMediaId }
+                ?: newPosition.mediaItem?.let { resolveSongFromMediaItem(it) }
+                ?: return
+
+            Log.d(TAG, "Repeat loop detected for '${song.title}': ${oldPosition.positionMs}ms -> ${newPosition.positionMs}ms")
+            finalizePlaybackTracking()
+            startPlaybackTracking(song.id)
+            updateRecentlyPlayed(song)
+        }
+
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             Log.d(TAG, "Is playing changed: $isPlaying")
 
