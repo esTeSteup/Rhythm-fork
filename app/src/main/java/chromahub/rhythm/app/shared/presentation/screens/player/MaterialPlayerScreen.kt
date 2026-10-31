@@ -168,7 +168,6 @@ import chromahub.rhythm.app.shared.presentation.components.common.StyledProgress
 import chromahub.rhythm.app.shared.presentation.components.common.ProgressStyle
 import chromahub.rhythm.app.shared.presentation.components.common.ThumbStyle
 import chromahub.rhythm.app.shared.presentation.components.common.M3CircularLoader
-import chromahub.rhythm.app.shared.presentation.components.common.M3LinearLoader
 import chromahub.rhythm.app.shared.presentation.components.common.FixedHeaderScreen
 import chromahub.rhythm.app.shared.presentation.components.common.AutoScrollingTextOnDemand
 import chromahub.rhythm.app.shared.presentation.components.player.PlayingEqIcon
@@ -2548,16 +2547,11 @@ fun MaterialPlayerScreen(
                                     )
                                 }
 
-                                // Customizable progress slider based on user setting
-                                if (showLoaderInPlayPauseButton) {
-                                    M3LinearLoader(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .padding(horizontal = 8.dp)
-                                            .height(8.dp),
-                                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
-                                    )
-                                                                } else if (playerProgressStyle == "WAVY") {
+                                // Customizable progress slider based on user setting.
+                                // Keep the determinate slider composed during seeking: replacing
+                                // it with the indeterminate loader recreated it afterwards and
+                                // restarted the wave animation on every drag.
+                                if (playerProgressStyle == "WAVY") {
                                     // WaveSlider: proper animated waves + morphing thumb + play/pause reaction
                                     WaveSlider(
                                         value = if (isScrubbing && enhancedSeekingEnabled) scrubProgress else progress(),
