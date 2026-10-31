@@ -67,6 +67,7 @@ import chromahub.rhythm.app.shared.presentation.components.Material3SettingsGrou
 import chromahub.rhythm.app.shared.presentation.components.Material3SettingsItem
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.ArtistChooserBottomSheet
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.ExtraControlBottomSheet
+import chromahub.rhythm.app.shared.presentation.components.bottomsheets.LyricsColorBottomSheet
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.AddToPlaylistBottomSheet
 
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.PlaybackBottomSheet
@@ -268,6 +269,7 @@ fun PlayerScreen(
         var showQueueSheet by remember { mutableStateOf(false) }
         var showSongInfoSheet by remember { mutableStateOf(false) }
         var showMoreSheet by remember { mutableStateOf(false) }
+        var showLyricsColorSheet by remember { mutableStateOf(false) }
         var showExpressiveBottomButtonsSheet by remember { mutableStateOf(false) }
         var showDeviceOutputSheet by remember { mutableStateOf(false) }
         var showAddToPlaylistSheetInternal by remember { mutableStateOf(false) }
@@ -695,6 +697,7 @@ fun PlayerScreen(
                 },
                 onSleepTimer = { showSleepTimerBottomSheet = true },
                 onLyricsEditor = { showLyricsEditorDialog = true },
+                onLyricsColors = { showLyricsColorSheet = true },
                 onAlbum = {
                     song?.let { currentSong ->
                         val album = resolveAlbumForSong(currentSong)
@@ -761,6 +764,13 @@ fun PlayerScreen(
                 haptic = haptic,
                 isExtraSmallWidth = false,
                 isCompactWidth = false
+            )
+        }
+
+        if (showLyricsColorSheet) {
+            LyricsColorBottomSheet(
+                onDismiss = { showLyricsColorSheet = false },
+                appSettings = appSettings
             )
         }
 

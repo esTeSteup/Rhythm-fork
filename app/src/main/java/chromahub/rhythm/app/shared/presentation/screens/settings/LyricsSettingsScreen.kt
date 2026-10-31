@@ -119,6 +119,8 @@ import chromahub.rhythm.app.shared.presentation.components.bottomsheets.Licenses
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.UpdateBottomSheet
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.LyricsApiPriorityBottomSheet
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.LrcRenameBehaviorBottomSheet
+import chromahub.rhythm.app.shared.presentation.components.bottomsheets.LyricsColorBottomSheet
+import chromahub.rhythm.app.shared.presentation.components.bottomsheets.lyricColorStyleName
 import chromahub.rhythm.app.ui.utils.LazyListStateSaver
 import chromahub.rhythm.app.features.local.presentation.viewmodel.MusicViewModel
 import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShapeProvider
@@ -178,6 +180,8 @@ fun LyricsSettingsScreen(onBackClick: () -> Unit) {
     val broadcastStatusEnabled by appSettings.broadcastStatusEnabled.collectAsState()
     var showPriorityBottomSheet by remember { mutableStateOf(false) }
     var showLrcRenameBottomSheet by remember { mutableStateOf(false) }
+    var showLyricsColorBottomSheet by remember { mutableStateOf(false) }
+    val lyricColorStyle by appSettings.lyricColorStyle.collectAsState()
 
     val scope = rememberCoroutineScope()
 
@@ -495,6 +499,18 @@ fun LyricsSettingsScreen(onBackClick: () -> Unit) {
                     )
 
                     val stylingItems = buildList {
+                        add(
+                            toMaterial3SettingsItem(
+                                context = context,
+                                hapticFeedback = hapticFeedback,
+                                item = SettingItem(
+                                    icon = MaterialSymbolIcon("palette"),
+                                    title = context.getString(R.string.settings_lyrics_colors),
+                                    description = lyricColorStyleName(lyricColorStyle),
+                                    onClick = { showLyricsColorBottomSheet = true }
+                                )
+                            )
+                        )
                         add(
                             toMaterial3SettingsItem(
                                 context = context,
@@ -863,6 +879,13 @@ fun LyricsSettingsScreen(onBackClick: () -> Unit) {
     if (showLrcRenameBottomSheet) {
         LrcRenameBehaviorBottomSheet(
             onDismiss = { showLrcRenameBottomSheet = false },
+            appSettings = appSettings
+        )
+    }
+
+    if (showLyricsColorBottomSheet) {
+        LyricsColorBottomSheet(
+            onDismiss = { showLyricsColorBottomSheet = false },
             appSettings = appSettings
         )
     }

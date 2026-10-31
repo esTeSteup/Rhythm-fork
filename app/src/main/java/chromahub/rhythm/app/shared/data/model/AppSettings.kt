@@ -173,6 +173,9 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_LYRICS_API_FALLBACK_RETRY = "lyrics_api_fallback_retry"
         private const val KEY_AUTO_HIDE_LYRICS_CONTROLS = "auto_hide_lyrics_controls"
         private const val KEY_LYRIC_BOLD = "lyric_bold"
+        private const val KEY_LYRIC_COLOR_STYLE = "lyric_color_style"
+        private const val KEY_LYRIC_TEXT_COLOR = "lyric_text_color"
+        private const val KEY_LYRIC_ACTIVE_COLOR = "lyric_active_color"
         private const val KEY_TRIM_LYRICS = "trim_lyrics"
         private const val KEY_LYRIC_NO_ANIMATION = "lyric_no_animation"
         private const val KEY_TRANSLATION_AUTO_WORD = "translation_auto_word"
@@ -858,6 +861,15 @@ class AppSettings private constructor(context: Context) {
 
     private val _lyricNoAnimation = MutableStateFlow(prefs.getBoolean(KEY_LYRIC_NO_ANIMATION, false))
     val lyricNoAnimation: StateFlow<Boolean> = _lyricNoAnimation.asStateFlow()
+
+    private val _lyricColorStyle = MutableStateFlow(prefs.getString(KEY_LYRIC_COLOR_STYLE, "THEME") ?: "THEME")
+    val lyricColorStyle: StateFlow<String> = _lyricColorStyle.asStateFlow()
+
+    private val _lyricTextColor = MutableStateFlow(prefs.getInt(KEY_LYRIC_TEXT_COLOR, 0xFFB0B0B0.toInt()))
+    val lyricTextColor: StateFlow<Int> = _lyricTextColor.asStateFlow()
+
+    private val _lyricActiveColor = MutableStateFlow(prefs.getInt(KEY_LYRIC_ACTIVE_COLOR, 0xFFFFFFFF.toInt()))
+    val lyricActiveColor: StateFlow<Int> = _lyricActiveColor.asStateFlow()
 
     private val _translationAutoWord = MutableStateFlow(prefs.getBoolean(KEY_TRANSLATION_AUTO_WORD, false))
     val translationAutoWord: StateFlow<Boolean> = _translationAutoWord.asStateFlow()
@@ -2611,6 +2623,21 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     fun setLyricNoAnimation(enable: Boolean) {
         prefs.edit { putBoolean(KEY_LYRIC_NO_ANIMATION, enable) }
         _lyricNoAnimation.value = enable
+    }
+
+    fun setLyricColorStyle(style: String) {
+        prefs.edit { putString(KEY_LYRIC_COLOR_STYLE, style) }
+        _lyricColorStyle.value = style
+    }
+
+    fun setLyricTextColor(argb: Int) {
+        prefs.edit { putInt(KEY_LYRIC_TEXT_COLOR, argb) }
+        _lyricTextColor.value = argb
+    }
+
+    fun setLyricActiveColor(argb: Int) {
+        prefs.edit { putInt(KEY_LYRIC_ACTIVE_COLOR, argb) }
+        _lyricActiveColor.value = argb
     }
 
     fun setTranslationAutoWord(enable: Boolean) {

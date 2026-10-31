@@ -44,6 +44,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +59,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import chromahub.rhythm.app.shared.data.model.AppSettings
 import androidx.compose.ui.unit.dp
 import chromahub.rhythm.app.shared.data.model.LyricsData
 import chromahub.rhythm.app.util.HapticUtils
@@ -128,6 +130,7 @@ fun ExtraControlBottomSheet(
     onEqualizer: () -> Unit,
     onSleepTimer: () -> Unit,
     onLyricsEditor: () -> Unit,
+    onLyricsColors: (() -> Unit)? = null,
     onAlbum: () -> Unit = {},
     onArtist: () -> Unit = {},
     onSongInfo: () -> Unit,
@@ -138,6 +141,9 @@ fun ExtraControlBottomSheet(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val appSettings = remember { AppSettings.getInstance(context) }
+    val lyricColorStyle by appSettings.lyricColorStyle.collectAsState()
+    val lyricColorStyleLabel = lyricColorStyleName(lyricColorStyle)
 
     fun dismissAndDo(action: () -> Unit) {
         scope.launch {
@@ -236,6 +242,20 @@ fun ExtraControlBottomSheet(
                 onClick = {
                     HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
                     dismissAndDo { onLyricsEditor() }
+                }
+            ))
+        }
+
+        onLyricsColors?.let { openLyricsColors ->
+            add(ControlAction(
+                icon = MaterialSymbolIcon("palette", filled = true),
+                label = context.getString(R.string.settings_lyrics_colors),
+                description = lyricColorStyleLabel,
+                containerColor = secondary,
+                iconColor = onSecondary,
+                onClick = {
+                    HapticUtils.performHapticFeedback(context, haptic, HapticType.HEAVY)
+                    dismissAndDo { openLyricsColors() }
                 }
             ))
         }

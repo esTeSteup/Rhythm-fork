@@ -155,6 +155,18 @@ fun WordByWordLyricsView(
     val lyricBoldVal by appSettings.lyricBold.collectAsState()
     val lyricNoAnimationVal by appSettings.lyricNoAnimation.collectAsState()
     val tapLyricsToSeek by appSettings.tapLyricsToSeek.collectAsState()
+    val lyricColorStyle by appSettings.lyricColorStyle.collectAsState()
+    val lyricTextColorArgb by appSettings.lyricTextColor.collectAsState()
+    val lyricActiveColorArgb by appSettings.lyricActiveColor.collectAsState()
+    val resolvedLyricColors = resolveLyricColors(
+        style = lyricColorStyle,
+        customTextArgb = lyricTextColorArgb,
+        customActiveArgb = lyricActiveColorArgb
+    )
+    // One shared brush so every line uses the same rainbow phase.
+    val rainbowBrush = if (resolvedLyricColors.rainbow) {
+        rememberLyricRainbowBrush(animated = !lyricNoAnimationVal)
+    } else null
     
     val parsedLyrics = remember(wordByWordLyrics) {
         RhythmLyricsParser.parseWordByWordLyrics(wordByWordLyrics)
@@ -437,7 +449,10 @@ fun WordByWordLyricsView(
                             noAnimation = lyricNoAnimationVal,
                             textColor = textColor,
                             activeColor = activeColor,
-                            subtitleColor = subtitleColor
+                            subtitleColor = subtitleColor,
+                            resolvedTextColor = resolvedLyricColors.text,
+                            resolvedActiveColor = resolvedLyricColors.active,
+                            rainbowBrush = rainbowBrush
                         )
                     }
                     is LyricsItem.Gap -> {
@@ -526,8 +541,16 @@ private fun WordByWordLyricLineItem(
     noAnimation: Boolean,
     textColor: Color? = null,
     activeColor: Color? = null,
-    subtitleColor: Color? = null
+    subtitleColor: Color? = null,
+    resolvedTextColor: Color? = null,
+    resolvedActiveColor: Color? = null,
+    rainbowBrush: Brush? = null
 ) {
+    val useRainbow = isCurrentLine && rainbowBrush != null
+    val hasResolvedPalette = resolvedTextColor != null || resolvedActiveColor != null
+    val secondaryLineColor = (if (hasResolvedPalette) (resolvedTextColor ?: resolvedActiveColor) else subtitleColor)
+        ?: MaterialTheme.colorScheme.tertiary
+
     val scale by animateFloatAsState(
         targetValue = when {
             isCurrentLine -> 1.08f
@@ -624,12 +647,17 @@ private fun WordByWordLyricLineItem(
             val isVoice3 = line.voiceTag in listOf("v3", "voice3", "group")
 
             val baseColor = when {
+                hasResolvedPalette ->
+                    resolvedActiveColor ?: resolvedTextColor ?: MaterialTheme.colorScheme.primary
                 isVoice2 -> activeColor ?: MaterialTheme.colorScheme.secondary
                 isVoice3 -> activeColor ?: MaterialTheme.colorScheme.tertiary
                 else -> activeColor ?: MaterialTheme.colorScheme.primary
             }
 
             val inactiveWordColor = when {
+                hasResolvedPalette ->
+                    if (isCurrentLine) baseColor.copy(alpha = 0.5f)
+                    else resolvedTextColor ?: baseColor
                 isVoice2 -> if (isCurrentLine) baseColor.copy(alpha = 0.5f) else baseColor
                 isVoice3 -> if (isCurrentLine) baseColor.copy(alpha = 0.5f) else baseColor
                 else -> if (isCurrentLine) baseColor.copy(alpha = 0.5f) else (textColor ?: MaterialTheme.colorScheme.onSurface)
@@ -637,7 +665,12 @@ private fun WordByWordLyricLineItem(
 
             val isWordPassed = isCurrentLine && wordIndex < activeWordIndex
 
-            val style = if (isWordActive) {
+            val style = if (useRainbow) {
+                SpanStyle(
+                    brush = rainbowBrush,
+                    fontWeight = if (lyricBold) FontWeight.Bold else FontWeight.Normal
+                )
+            } else if (isWordActive) {
                 val range = wordRanges.getOrNull(wordIndex)
                 val layout = textLayoutResult
                 val sweepProgress = animatedProgress.value
@@ -739,7 +772,7 @@ private fun WordByWordLyricLineItem(
                     fontSize = MaterialTheme.typography.bodyMedium.fontSize * (0.92f * textSizeMultiplier),
                     lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.32f * textSizeMultiplier
                 ),
-                color = (subtitleColor ?: MaterialTheme.colorScheme.tertiary).copy(
+                color = secondaryLineColor.copy(
                     alpha = if (isCurrentLine) 0.86f else 0.62f
                 ),
                 textAlign = lineTextAlignment,
@@ -763,7 +796,7 @@ private fun WordByWordLyricLineItem(
                     lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.3f * textSizeMultiplier,
                     letterSpacing = 0.02.sp
                 ),
-                color = (textColor ?: MaterialTheme.colorScheme.onSurface).copy(
+                color = secondaryLineColor.copy(
                     alpha = if (isCurrentLine) 0.68f else 0.5f
                 ),
                 textAlign = lineTextAlignment,

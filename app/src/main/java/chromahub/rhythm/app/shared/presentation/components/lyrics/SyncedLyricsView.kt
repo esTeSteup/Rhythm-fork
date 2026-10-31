@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -189,6 +190,18 @@ fun SyncedLyricsView(
     val lyricBoldVal by appSettings.lyricBold.collectAsState()
     val lyricNoAnimationVal by appSettings.lyricNoAnimation.collectAsState()
     val tapLyricsToSeek by appSettings.tapLyricsToSeek.collectAsState()
+    val lyricColorStyle by appSettings.lyricColorStyle.collectAsState()
+    val lyricTextColorArgb by appSettings.lyricTextColor.collectAsState()
+    val lyricActiveColorArgb by appSettings.lyricActiveColor.collectAsState()
+    val resolvedLyricColors = resolveLyricColors(
+        style = lyricColorStyle,
+        customTextArgb = lyricTextColorArgb,
+        customActiveArgb = lyricActiveColorArgb
+    )
+    // One shared brush so every line uses the same rainbow phase.
+    val rainbowBrush = if (resolvedLyricColors.rainbow) {
+        rememberLyricRainbowBrush(animated = !lyricNoAnimationVal)
+    } else null
 
     // Track previous line for smooth transitions
     val previousLineIndex = remember { mutableIntStateOf(-1) }
@@ -379,7 +392,10 @@ fun SyncedLyricsView(
                             noAnimation = lyricNoAnimationVal,
                             textColor = textColor,
                             activeColor = activeColor,
-                            subtitleColor = subtitleColor
+                            subtitleColor = subtitleColor,
+                            resolvedTextColor = resolvedLyricColors.text,
+                            resolvedActiveColor = resolvedLyricColors.active,
+                            rainbowBrush = rainbowBrush
                         )
                     }
 
@@ -486,9 +502,13 @@ private fun SyncedLyricItem(
     noAnimation: Boolean = false,
     textColor: Color? = null,
     activeColor: Color? = null,
-    subtitleColor: Color? = null
+    subtitleColor: Color? = null,
+    resolvedTextColor: Color? = null,
+    resolvedActiveColor: Color? = null,
+    rainbowBrush: Brush? = null
 ) {
     val isCurrentLine = currentLineIndex == index
+    val useRainbow = isCurrentLine && rainbowBrush != null
     val isPreviousLine = currentLineIndex == index + 1
     val isNextLine = currentLineIndex == index - 1
     
@@ -549,7 +569,16 @@ private fun SyncedLyricItem(
     val isVoice3 = line.voiceTag in listOf("v3", "voice3", "group")
 
     // Color transition for active line with voice-specific colors
+    val hasResolvedPalette = resolvedTextColor != null || resolvedActiveColor != null
+    val secondaryLineColor = (if (hasResolvedPalette) resolvedTextColor else subtitleColor)
+        ?: MaterialTheme.colorScheme.tertiary
     val lineColor = when {
+        useRainbow -> Color.Unspecified
+        hasResolvedPalette -> if (isCurrentLine) {
+            resolvedActiveColor ?: MaterialTheme.colorScheme.primary
+        } else {
+            resolvedTextColor ?: MaterialTheme.colorScheme.onSurface
+        }
         isCurrentLine -> {
             when {
                 isVoice2 -> activeColor ?: MaterialTheme.colorScheme.secondary
@@ -610,7 +639,8 @@ private fun SyncedLyricItem(
                 fontWeight = fontWeight,
                 fontSize = MaterialTheme.typography.headlineSmall.fontSize * textSizeMultiplier,
                 lineHeight = MaterialTheme.typography.headlineSmall.lineHeight * 1.5f * textSizeMultiplier,
-                letterSpacing = letterSpacing
+                letterSpacing = letterSpacing,
+                brush = if (useRainbow) rainbowBrush else null
             ),
             color = lineColor,
             textAlign = lineTextAlignment,
@@ -627,7 +657,7 @@ private fun SyncedLyricItem(
                     fontWeight = if (isCurrentLine) FontWeight.Medium else FontWeight.Normal,
                     lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.4f
                 ),
-                color = (subtitleColor ?: MaterialTheme.colorScheme.tertiary).copy(alpha = if (isCurrentLine) 0.84f else 0.62f),
+                color = secondaryLineColor.copy(alpha = if (isCurrentLine) 0.84f else 0.62f),
                 textAlign = lineTextAlignment,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -649,7 +679,7 @@ private fun SyncedLyricItem(
                     lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.3f,
                     letterSpacing = 0.02.sp
                 ),
-                color = (textColor ?: MaterialTheme.colorScheme.onSurface).copy(
+                color = secondaryLineColor.copy(
                     alpha = if (isCurrentLine) 0.65f else 0.5f
                 ),
                 textAlign = lineTextAlignment,
