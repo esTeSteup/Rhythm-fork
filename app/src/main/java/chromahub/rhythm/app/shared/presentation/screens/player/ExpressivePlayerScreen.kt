@@ -305,14 +305,23 @@ fun ExpressivePlayerScreen(
     onShareFile: () -> Unit = {},
     onEditBottomButtons: () -> Unit = {}
 ) {
+    // Seeks and buffers briefly flip isPlaying to false. Hold the last stable playback state
+    // through them so the artwork does not shrink/grow and the play button does not flash.
+    var stableIsPlaying by remember { mutableStateOf(isPlaying) }
+    LaunchedEffect(isPlaying, isSeeking, isMediaLoading) {
+        if (!isSeeking && !isMediaLoading) {
+            stableIsPlaying = isPlaying
+        }
+    }
+
     val artworkScale by animateFloatAsState(
-        targetValue = if (isPlaying) 1.0f else 0.85f,
+        targetValue = if (stableIsPlaying) 1.0f else 0.85f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "ArtworkScale"
     )
 
     val artworkCornerRadius by animateDpAsState(
-        targetValue = if (isPlaying) 32.dp else 48.dp,
+        targetValue = if (stableIsPlaying) 32.dp else 48.dp,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "ArtworkCornerRadius"
     )
@@ -455,7 +464,18 @@ fun ExpressivePlayerScreen(
     val resolvedDurationMs = musicViewModel?.duration?.collectAsState()?.value ?: 0L
     val totalTimeMs = song?.duration?.takeIf { it > 0 } ?: resolvedDurationMs.takeIf { it > 0 } ?: 0L
     val currentTimeMs = (progressValue * totalTimeMs).toLong()
-    val showBuffering = isMediaLoading || isSeeking
+    // Debounce buffering so a brief seek-induced buffer does not flash the button loader.
+    // isSeeking is deliberately excluded: it only lasts 500 ms and made the loader flash
+    // immediately after every seek.
+    var showBuffering by remember { mutableStateOf(false) }
+    LaunchedEffect(isMediaLoading) {
+        if (isMediaLoading) {
+            delay(250)
+            showBuffering = true
+        } else {
+            showBuffering = false
+        }
+    }
 
     LaunchedEffect(lyricsVisible, lyricsControlsVisible, lastLyricsInteractionTime, autoHideLyricsControls) {
         if (lyricsVisible && autoHideLyricsControls && lyricsControlsVisible) {
@@ -1485,7 +1505,7 @@ fun ExpressivePlayerScreen(
                                     Row(Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(if (isCompactWidth) 8.dp else 16.dp), verticalAlignment = Alignment.CenterVertically) {
                                         RhythmPlayButton(
-                                            isPlaying = isPlaying,
+                                            isPlaying = stableIsPlaying,
                                             showBuffering = showBuffering,
                                             onClick = { playerHaptic(HapticType.HEAVY); onPlayPause() },
                                             containerColor = when {

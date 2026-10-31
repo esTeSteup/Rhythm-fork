@@ -813,9 +813,25 @@ fun MaterialPlayerScreen(
     // State for showing loader in play/pause button
     var showLoaderInPlayPauseButton by remember { mutableStateOf(false) }
     
-    // Show loader only when media is loading or seeking
-    LaunchedEffect(isMediaLoading, isSeeking) {
-        showLoaderInPlayPauseButton = isMediaLoading || isSeeking
+    // Debounce buffering so a brief seek-induced buffer does not flash the button loader.
+    // isSeeking is deliberately excluded: it only lasts 500 ms and made the loader flash
+    // immediately after every seek.
+    LaunchedEffect(isMediaLoading) {
+        if (isMediaLoading) {
+            delay(250)
+            showLoaderInPlayPauseButton = true
+        } else {
+            showLoaderInPlayPauseButton = false
+        }
+    }
+
+    // Seeks and buffers briefly flip isPlaying. Hold the last stable playback state through
+    // them so the play button does not flash Play/Pause.
+    var stableIsPlaying by remember { mutableStateOf(isPlaying) }
+    LaunchedEffect(isPlaying, isSeeking, isMediaLoading) {
+        if (!isSeeking && !isMediaLoading) {
+            stableIsPlaying = isPlaying
+        }
     }
 
     // Entry animation states - staggered like LyricsEditorBottomSheet
@@ -2670,7 +2686,7 @@ fun MaterialPlayerScreen(
                             }
                         ) {
                             chromahub.rhythm.app.shared.presentation.components.common.ExpressivePlayerControlGroup(
-                            isPlaying = isPlaying && !showLoaderInPlayPauseButton,
+                            isPlaying = stableIsPlaying && !showLoaderInPlayPauseButton,
                             showSeekButtons = playerShowSeekButtons && canSeek,
                             onPrevious = {
                                 playerHaptic(HapticType.LIGHT)
