@@ -54,6 +54,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Eliminated Transition Stutter & ANRs**: Removed main-thread lock contention when collecting playback stats on track transitions, eliminating UI freezes and ANR errors ([#701](https://github.com/cromaguy/Rhythm/issues/701)).
 - **Debounced MediaStore Observer**: Debounced system media observer events behind a staleness check to prevent scanning storms during large file transfers ([#646](https://github.com/cromaguy/Rhythm/issues/646)).
 
+## [5.5.501.1307 Beta] - 2026-11-25
+
+### Added
+- **Lyrics Text Encoding**: New setting under Lyrics → Lyrics File & Data Management to force the decoding of local `.lrc`/`.txt` files (UTF-8, UTF-16, GBK/GB18030, Big5, Shift-JIS, EUC-KR, Windows-1252), with auto-detection as the default.
+
+### Fixed
+- **Backup Section Picker**: The Cancel/Export buttons are now always visible when choosing which sections to back up or restore; previously the list could consume the whole sheet and hide them.
+- **Playlist Song Options**: "Add to playlist" and "Like" now work from the song menu on playlist detail pages instead of silently closing the sheet.
+- **Song Options Sheet Jitter**: Scrolling the action list no longer drags or bounces the bottom sheet; the sheet stays still while scrolling and leaves a safe margin below the status bar.
+- **Lyrics Encoding Detection**: Local lyrics files encoded with GBK/GB18030, Big5, Shift-JIS or EUC-KR are now detected automatically instead of being decoded as broken UTF-8; embedded tag lyrics stored with the wrong single-byte charset are repaired automatically.
+- **UTF-16 Lyrics Import**: UTF-16 lyrics files are no longer rejected as binary content when imported.
+
 ## [5.5.499.1302] - 2026-10-13
 
 ### Fixed

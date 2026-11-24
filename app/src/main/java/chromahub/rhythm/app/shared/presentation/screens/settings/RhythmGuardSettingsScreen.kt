@@ -1525,265 +1525,275 @@ fun BackupRestoreSectionPickerBottomSheet(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
-        StandardBottomSheetHeader(
-            title = title,
-            subtitle = subtitle,
-            visible = true
-        )
+        // The header, scrollable section list and action buttons must live in one Column so the
+        // list can be given the remaining height. Measuring the list without a weight lets it
+        // consume the whole sheet, collapsing the Cancel/Confirm buttons to zero height.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+        ) {
+            StandardBottomSheetHeader(
+                title = title,
+                subtitle = subtitle,
+                visible = true
+            )
 
-        val scrollState = rememberScrollState()
+            val scrollState = rememberScrollState()
 
-        AdaptiveSheetScrollContainer(
-            scrollState = scrollState,
-            modifier = Modifier.fillMaxWidth()
-        ) { endPadding ->
-            Column(
+            AdaptiveSheetScrollContainer(
+                scrollState = scrollState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(scrollState)
-                    .padding(end = endPadding)
-                    .navigationBarsPadding()
-                    .padding(bottom = 20.dp)
-            ) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        )
-                    ) {
-                        Row(
+                    .weight(1f, fill = false)
+            ) { endPadding ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState)
+                        .padding(end = endPadding)
+                        .navigationBarsPadding()
+                        .padding(bottom = 20.dp)
+                ) {
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .padding(horizontal = 20.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            )
                         ) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier.size(36.dp)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = RhythmIcons.Tune,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.size(20.dp)
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = RhythmIcons.Tune,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.rhythmguardsettingsscreen_choose_sections),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = pluralStringResource(R.plurals.backup_restore_sections_enabled, selectedSectionCount, selectedSectionCount, 3),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.rhythmguardsettingsscreen_choose_sections),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = pluralStringResource(R.plurals.backup_restore_sections_enabled, selectedSectionCount, selectedSectionCount, 3),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
 
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                FilledTonalButton(
-                                    onClick = {
-                                        onSectionsChange(
-                                            sections.copy(
-                                                includeGeneralSettings = true,
-                                                includeLibraryData = true,
-                                                includeStatsAndRhythmGuard = true
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FilledTonalButton(
+                                        onClick = {
+                                            onSectionsChange(
+                                                sections.copy(
+                                                    includeGeneralSettings = true,
+                                                    includeLibraryData = true,
+                                                    includeStatsAndRhythmGuard = true
+                                                )
                                             )
-                                        )
-                                    },
-                                    enabled = !isProcessing,
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
-                                ) {
-                                    Text(stringResource(R.string.autoeqprofileselector_all), style = MaterialTheme.typography.labelLarge)
-                                }
-                                FilledTonalButton(
-                                    onClick = {
-                                        onSectionsChange(
-                                            sections.copy(
-                                                includeGeneralSettings = false,
-                                                includeLibraryData = false,
-                                                includeStatsAndRhythmGuard = false
+                                        },
+                                        enabled = !isProcessing,
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                                    ) {
+                                        Text(stringResource(R.string.autoeqprofileselector_all), style = MaterialTheme.typography.labelLarge)
+                                    }
+                                    FilledTonalButton(
+                                        onClick = {
+                                            onSectionsChange(
+                                                sections.copy(
+                                                    includeGeneralSettings = false,
+                                                    includeLibraryData = false,
+                                                    includeStatsAndRhythmGuard = false
+                                                )
                                             )
-                                        )
-                                    },
-                                    enabled = !isProcessing,
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
-                                ) {
-                                    Text(stringResource(R.string.rhythmguardsettingsscreen_none), style = MaterialTheme.typography.labelLarge)
+                                        },
+                                        enabled = !isProcessing,
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                                    ) {
+                                        Text(stringResource(R.string.rhythmguardsettingsscreen_none), style = MaterialTheme.typography.labelLarge)
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    val pickerItems = listOf(
-                        Material3SettingsItem(
-                            icon = RhythmIcons.Settings,
-                            title = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.rhythmguardsettingsscreen_general_settings),
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Surface(
-                                        shape = RoundedCornerShape(999.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant
+                        val pickerItems = listOf(
+                            Material3SettingsItem(
+                                icon = RhythmIcons.Settings,
+                                title = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.backup_restore_section_core),
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                            text = stringResource(R.string.rhythmguardsettingsscreen_general_settings),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(999.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.backup_restore_section_core),
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                },
+                                description = {
+                                    Text(stringResource(R.string.backup_restore_section_core_desc))
+                                },
+                                trailingContent = {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        TunerAnimatedSwitch(
+                                            checked = sections.includeGeneralSettings,
+                                            onCheckedChange = { onSectionsChange(sections.copy(includeGeneralSettings = it)) }
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = if (sections.includeGeneralSettings) stringResource(R.string.backup_restore_status_included) else stringResource(R.string.backup_restore_status_excluded),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
+                                },
+                                onClick = {
+                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                    onSectionsChange(sections.copy(includeGeneralSettings = !sections.includeGeneralSettings))
                                 }
-                            },
-                            description = {
-                                Text(stringResource(R.string.backup_restore_section_core_desc))
-                            },
-                            trailingContent = {
-                                Column(horizontalAlignment = Alignment.End) {
-                                    TunerAnimatedSwitch(
-                                        checked = sections.includeGeneralSettings,
-                                        onCheckedChange = { onSectionsChange(sections.copy(includeGeneralSettings = it)) }
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = if (sections.includeGeneralSettings) stringResource(R.string.backup_restore_status_included) else stringResource(R.string.backup_restore_status_excluded),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            },
-                            onClick = {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
-                                onSectionsChange(sections.copy(includeGeneralSettings = !sections.includeGeneralSettings))
-                            }
-                        ),
-                        Material3SettingsItem(
-                            icon = RhythmIcons.Library,
-                            title = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.rhythmguardsettingsscreen_library_data),
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Surface(
-                                        shape = RoundedCornerShape(999.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            Material3SettingsItem(
+                                icon = RhythmIcons.Library,
+                                title = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.backup_restore_section_collection),
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                            text = stringResource(R.string.rhythmguardsettingsscreen_library_data),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(999.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.backup_restore_section_collection),
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                },
+                                description = {
+                                    Text(stringResource(R.string.backup_restore_section_collection_desc))
+                                },
+                                trailingContent = {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        TunerAnimatedSwitch(
+                                            checked = sections.includeLibraryData,
+                                            onCheckedChange = { onSectionsChange(sections.copy(includeLibraryData = it)) }
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = if (sections.includeLibraryData) stringResource(R.string.backup_restore_status_included) else stringResource(R.string.backup_restore_status_excluded),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
+                                },
+                                onClick = {
+                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                    onSectionsChange(sections.copy(includeLibraryData = !sections.includeLibraryData))
                                 }
-                            },
-                            description = {
-                                Text(stringResource(R.string.backup_restore_section_collection_desc))
-                            },
-                            trailingContent = {
-                                Column(horizontalAlignment = Alignment.End) {
-                                    TunerAnimatedSwitch(
-                                        checked = sections.includeLibraryData,
-                                        onCheckedChange = { onSectionsChange(sections.copy(includeLibraryData = it)) }
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = if (sections.includeLibraryData) stringResource(R.string.backup_restore_status_included) else stringResource(R.string.backup_restore_status_excluded),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            },
-                            onClick = {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
-                                onSectionsChange(sections.copy(includeLibraryData = !sections.includeLibraryData))
-                            }
-                        ),
-                        Material3SettingsItem(
-                            icon = MaterialSymbolIcon("auto_graph"),
-                            title = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.rhythmguardsettingsscreen_stats_rhythm_guard),
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Surface(
-                                        shape = RoundedCornerShape(999.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            Material3SettingsItem(
+                                icon = MaterialSymbolIcon("auto_graph"),
+                                title = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.backup_restore_section_insight),
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                            text = stringResource(R.string.rhythmguardsettingsscreen_stats_rhythm_guard),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(999.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.backup_restore_section_insight),
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                },
+                                description = {
+                                    Text(stringResource(R.string.backup_restore_section_insight_desc))
+                                },
+                                trailingContent = {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        TunerAnimatedSwitch(
+                                            checked = sections.includeStatsAndRhythmGuard,
+                                            onCheckedChange = { onSectionsChange(sections.copy(includeStatsAndRhythmGuard = it)) }
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = if (sections.includeStatsAndRhythmGuard) stringResource(R.string.backup_restore_status_included) else stringResource(R.string.backup_restore_status_excluded),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
+                                },
+                                onClick = {
+                                    HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
+                                    onSectionsChange(sections.copy(includeStatsAndRhythmGuard = !sections.includeStatsAndRhythmGuard))
                                 }
-                            },
-                            description = {
-                                Text(stringResource(R.string.backup_restore_section_insight_desc))
-                            },
-                            trailingContent = {
-                                Column(horizontalAlignment = Alignment.End) {
-                                    TunerAnimatedSwitch(
-                                        checked = sections.includeStatsAndRhythmGuard,
-                                        onCheckedChange = { onSectionsChange(sections.copy(includeStatsAndRhythmGuard = it)) }
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = if (sections.includeStatsAndRhythmGuard) stringResource(R.string.backup_restore_status_included) else stringResource(R.string.backup_restore_status_excluded),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            },
-                            onClick = {
-                                HapticUtils.performHapticFeedback(context, haptic, HapticType.LIGHT)
-                                onSectionsChange(sections.copy(includeStatsAndRhythmGuard = !sections.includeStatsAndRhythmGuard))
-                            }
+                            )
                         )
-                    )
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                    ) {
-                        Material3SettingsGroup(
-                            items = pickerItems,
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp)
+                        ) {
+                            Material3SettingsGroup(
+                                items = pickerItems,
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            )
+                        }
                     }
                 }
-            }
 
             Spacer(modifier = Modifier.height(18.dp))
 
@@ -1833,6 +1843,7 @@ fun BackupRestoreSectionPickerBottomSheet(
             }
         }
     }
+}
 
 // ============ Guard dashboard components ============
 
