@@ -400,6 +400,13 @@ fun RhythmAdaptiveModalSheet(
     adaptiveType: SheetAdaptiveType = SheetAdaptiveType.AUTO_DIALOG,
     tabletMaxWidth: Dp? = null,
     showCloseButton: Boolean = true,
+    /**
+     * On phones, leaves at least this much vertical space between the top of the screen and the
+     * sheet. Keeping the sheet away from the status bar avoids Material3's offset-dependent top
+     * inset compensation, which can make tall sheets jitter/bounce while they are dragged.
+     * 0.dp keeps the default (content may fill the whole screen).
+     */
+    phoneMaxHeightMargin: Dp = 0.dp,
     lazyListState: LazyListState? = null,
     gridState: LazyGridState? = null,
     scrollState: ScrollState? = null,
@@ -536,6 +543,13 @@ fun RhythmAdaptiveModalSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(
+                        max = if (phoneMaxHeightMargin > 0.dp) {
+                            (screenHeight.dp - phoneMaxHeightMargin).coerceAtLeast(160.dp)
+                        } else {
+                            Dp.Unspecified
+                        }
+                    )
                     .wrapContentHeight()
             ) {
                 scope.content()

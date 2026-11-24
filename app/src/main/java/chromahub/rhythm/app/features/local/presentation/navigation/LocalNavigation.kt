@@ -3847,6 +3847,12 @@ private fun LocalNavigationContent(
                     val allAlbums by viewModel.albums.collectAsState()
                     val playlistHaptics = LocalHapticFeedback.current
 
+                    // Add-to-playlist flow for the song options sheet
+                    var showAddToPlaylistSheet by remember { mutableStateOf(false) }
+                    var selectedSongForPlaylist by remember { mutableStateOf<Song?>(null) }
+                    var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+                    var songForCreatePlaylistDialog by remember { mutableStateOf<Song?>(null) }
+
                     // Write permission launcher for Android 11+ metadata editing
                     val writePermissionLauncher = rememberLauncherForActivityResult(
                         contract = androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult()
@@ -3934,6 +3940,13 @@ private fun LocalNavigationContent(
                             onAddToQueue = { song ->
                                 viewModel.addSongToQueue(song)
                             },
+                            onToggleFavorite = { song ->
+                                viewModel.toggleFavorite(song)
+                            },
+                            onAddToPlaylist = { song ->
+                                selectedSongForPlaylist = song
+                                showAddToPlaylistSheet = true
+                            },
                             onGoToAlbum = { song ->
                                 val album = allAlbums.findAlbumForSong(song)
                                 val albumId = album?.id ?: song.albumId.ifBlank { "unknown_${song.album}" }
@@ -3971,6 +3984,56 @@ private fun LocalNavigationContent(
                                 } catch (e: Exception) {
                                     android.widget.Toast.makeText(context, R.string.materialplayerscreen_unable_to_share_file, android.widget.Toast.LENGTH_SHORT).show()
                                 }
+                            }
+                        )
+                    }
+
+                    // Add to playlist bottom sheet
+                    if (showAddToPlaylistSheet && selectedSongForPlaylist != null) {
+                        AddToPlaylistBottomSheet(
+                            song = selectedSongForPlaylist!!,
+                            playlists = playlists,
+                            onDismissRequest = {
+                                showAddToPlaylistSheet = false
+                                selectedSongForPlaylist = null
+                            },
+                            onAddToPlaylist = { targetPlaylist ->
+                                viewModel.addSongToPlaylist(selectedSongForPlaylist!!, targetPlaylist.id) { message ->
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                }
+                                showAddToPlaylistSheet = false
+                                selectedSongForPlaylist = null
+                            },
+                            onCreateNewPlaylist = {
+                                songForCreatePlaylistDialog = selectedSongForPlaylist
+                                showCreatePlaylistDialog = true
+                                showAddToPlaylistSheet = false
+                            }
+                        )
+                    }
+
+                    if (showCreatePlaylistDialog) {
+                        CreatePlaylistDialog(
+                            onDismiss = {
+                                showCreatePlaylistDialog = false
+                                songForCreatePlaylistDialog = null
+                            },
+                            onConfirm = { name ->
+                                viewModel.createPlaylist(name)
+                                showCreatePlaylistDialog = false
+                                songForCreatePlaylistDialog = null
+                            },
+                            song = songForCreatePlaylistDialog,
+                            onConfirmWithSong = { name ->
+                                if (songForCreatePlaylistDialog != null) {
+                                    viewModel.createPlaylist(name, listOf(songForCreatePlaylistDialog!!)) { message ->
+                                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    viewModel.createPlaylist(name)
+                                }
+                                showCreatePlaylistDialog = false
+                                songForCreatePlaylistDialog = null
                             }
                         )
                     }

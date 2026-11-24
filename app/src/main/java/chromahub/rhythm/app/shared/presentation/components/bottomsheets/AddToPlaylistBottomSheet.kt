@@ -133,6 +133,7 @@ fun AddToPlaylistBottomSheet(
 
     RhythmAdaptiveModalSheet(
         adaptiveType = SheetAdaptiveType.AUTO_DIALOG,
+        phoneMaxHeightMargin = 160.dp,
         lazyListState = playlistListState,
         modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
         onDismissRequest = onDismissRequest,

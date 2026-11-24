@@ -45,14 +45,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import chromahub.rhythm.app.R
 import chromahub.rhythm.app.shared.data.model.Song
@@ -297,8 +302,26 @@ fun SongOverflowBottomSheet(
 
     val scrollState = rememberScrollState()
 
+    // Keeps the sheet stationary while the action list itself is being scrolled. Without this,
+    // leftover scroll deltas/velocity are forwarded to the modal sheet, so swiping the list down
+    // (e.g. when it is already at the top) drags the whole sheet and makes it bounce/jitter.
+    // Dragging the sheet by its header/drag handle still works.
+    val sheetScrollGuard = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset = available
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
+                available
+        }
+    }
+
     RhythmAdaptiveModalSheet(
         adaptiveType = SheetAdaptiveType.AUTO_DIALOG,
+        phoneMaxHeightMargin = 160.dp,
         scrollState = scrollState,
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -473,7 +496,8 @@ fun SongOverflowBottomSheet(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(scrollState)
+                        .nestedScroll(sheetScrollGuard)
+                        .verticalScroll(scrollState, overscrollEffect = null)
                         .padding(start = 24.dp, end = 24.dp + endPadding, top = 4.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
