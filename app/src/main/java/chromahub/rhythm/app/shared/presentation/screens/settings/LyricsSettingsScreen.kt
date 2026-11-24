@@ -120,7 +120,9 @@ import chromahub.rhythm.app.shared.presentation.components.bottomsheets.UpdateBo
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.LyricsApiPriorityBottomSheet
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.LrcRenameBehaviorBottomSheet
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.LyricsColorBottomSheet
+import chromahub.rhythm.app.shared.presentation.components.bottomsheets.LyricsTextEncodingBottomSheet
 import chromahub.rhythm.app.shared.presentation.components.bottomsheets.lyricColorStyleName
+import chromahub.rhythm.app.util.LyricsEncoding
 import chromahub.rhythm.app.ui.utils.LazyListStateSaver
 import chromahub.rhythm.app.features.local.presentation.viewmodel.MusicViewModel
 import chromahub.rhythm.app.shared.presentation.components.common.ExpressiveShapeProvider
@@ -180,8 +182,10 @@ fun LyricsSettingsScreen(onBackClick: () -> Unit) {
     val broadcastStatusEnabled by appSettings.broadcastStatusEnabled.collectAsState()
     var showPriorityBottomSheet by remember { mutableStateOf(false) }
     var showLrcRenameBottomSheet by remember { mutableStateOf(false) }
+    var showLyricsTextEncodingBottomSheet by remember { mutableStateOf(false) }
     var showLyricsColorBottomSheet by remember { mutableStateOf(false) }
     val lyricColorStyle by appSettings.lyricColorStyle.collectAsState()
+    val lyricsTextEncoding by appSettings.lyricsTextEncoding.collectAsState()
 
     val scope = rememberCoroutineScope()
 
@@ -765,6 +769,26 @@ fun LyricsSettingsScreen(onBackClick: () -> Unit) {
                             context = context,
                             hapticFeedback = hapticFeedback,
                             item = SettingItem(
+                                icon = MaterialSymbolIcon("text_fields"),
+                                title = context.getString(R.string.lyrics_text_encoding),
+                                description = LyricsEncoding.Option
+                                    .fromId(lyricsTextEncoding)
+                                    .let { option ->
+                                        if (option == LyricsEncoding.Option.AUTO) {
+                                            context.getString(R.string.lyrics_encoding_auto)
+                                        } else {
+                                            option.displayName
+                                        }
+                                    },
+                                onClick = {
+                                    showLyricsTextEncodingBottomSheet = true
+                                }
+                            )
+                        ),
+                        toMaterial3SettingsItem(
+                            context = context,
+                            hapticFeedback = hapticFeedback,
+                            item = SettingItem(
                                 icon = MaterialSymbolIcon("upload"),
                                 title = context.getString(R.string.lyrics_export_preferences),
                                 description = context.getString(R.string.lyrics_export_preferences_desc),
@@ -879,6 +903,13 @@ fun LyricsSettingsScreen(onBackClick: () -> Unit) {
     if (showLrcRenameBottomSheet) {
         LrcRenameBehaviorBottomSheet(
             onDismiss = { showLrcRenameBottomSheet = false },
+            appSettings = appSettings
+        )
+    }
+
+    if (showLyricsTextEncodingBottomSheet) {
+        LyricsTextEncodingBottomSheet(
+            onDismiss = { showLyricsTextEncodingBottomSheet = false },
             appSettings = appSettings
         )
     }

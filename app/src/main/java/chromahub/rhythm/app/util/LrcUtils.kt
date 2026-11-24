@@ -18,7 +18,6 @@ import androidx.media3.extractor.metadata.vorbis.VorbisComment
 import com.google.gson.Gson
 import chromahub.rhythm.app.util.SemanticLyrics.SyncedLyrics
 import java.io.File
-import java.nio.charset.Charset
 
 object LrcUtils {
 
@@ -161,7 +160,7 @@ object LrcUtils {
     private fun loadTextFile(lrcFile: File?, errorText: String?): String? {
         return try {
             if (lrcFile?.exists() == true)
-                lrcFile.readBytes().toString(Charset.defaultCharset())
+                LyricsEncoding.decode(lrcFile.readBytes())
             else null
         } catch (e: Exception) {
             Log.e(TAG, Log.getThrowableString(e)!!)

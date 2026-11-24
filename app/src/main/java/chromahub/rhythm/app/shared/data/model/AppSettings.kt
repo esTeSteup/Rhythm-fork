@@ -21,6 +21,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import chromahub.rhythm.app.util.GsonUtils
 import chromahub.rhythm.app.util.ArtistSeparator
+import chromahub.rhythm.app.util.LyricsEncoding
 import chromahub.rhythm.app.util.StoragePathUtils
 import chromahub.rhythm.app.worker.BackupWorker
 import chromahub.rhythm.app.worker.RhythmPulseNotificationWorker
@@ -669,6 +670,7 @@ class AppSettings private constructor(context: Context) {
         const val KEY_SONG_LYRICS_PREFERENCES = "song_lyrics_preferences"
         const val KEY_SONG_CUSTOM_LRC_FILES = "song_custom_lrc_files"
         const val KEY_LRC_RENAME_BEHAVIOR = "lrc_rename_behavior"
+        const val KEY_LYRICS_TEXT_ENCODING = "lyrics_text_encoding"
         
         @Volatile
         private var INSTANCE: AppSettings? = null
@@ -1506,6 +1508,12 @@ class AppSettings private constructor(context: Context) {
     // LRC Rename Behavior - "ask", "always", "never"
     private val _lrcRenameBehavior = MutableStateFlow(prefs.getString(KEY_LRC_RENAME_BEHAVIOR, "ask") ?: "ask")
     val lrcRenameBehavior: StateFlow<String> = _lrcRenameBehavior.asStateFlow()
+
+    // Encoding used for local lyrics files - LyricsEncoding.AUTO or a LyricsEncoding.Option id
+    private val _lyricsTextEncoding = MutableStateFlow(
+        prefs.getString(KEY_LYRICS_TEXT_ENCODING, LyricsEncoding.AUTO) ?: LyricsEncoding.AUTO
+    )
+    val lyricsTextEncoding: StateFlow<String> = _lyricsTextEncoding.asStateFlow()
     
     private val _defaultPlaylistsEnabled = MutableStateFlow(prefs.getBoolean(KEY_DEFAULT_PLAYLISTS_ENABLED, true))
     val defaultPlaylistsEnabled: StateFlow<Boolean> = _defaultPlaylistsEnabled.asStateFlow()
@@ -5868,6 +5876,9 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
         
         // Lyrics song preferences and renaming behavior
         _lrcRenameBehavior.value = prefs.getString(KEY_LRC_RENAME_BEHAVIOR, "ask") ?: "ask"
+        _lyricsTextEncoding.value = LyricsEncoding.Option.fromId(
+            prefs.getString(KEY_LYRICS_TEXT_ENCODING, LyricsEncoding.AUTO)
+        ).id
         _songLyricsPreferences.value = try {
             val json = prefs.getString(KEY_SONG_LYRICS_PREFERENCES, null)
             if (json != null) Gson().fromJson(json, object : TypeToken<Map<String, String>>() {}.type) else emptyMap()
@@ -5911,6 +5922,12 @@ private val _autoCheckForUpdates = MutableStateFlow(prefs.getBoolean(KEY_AUTO_CH
     fun setLrcRenameBehavior(value: String) {
         _lrcRenameBehavior.value = value
         prefs.edit { putString(KEY_LRC_RENAME_BEHAVIOR, value) }
+    }
+
+    fun setLyricsTextEncoding(value: String) {
+        val normalized = LyricsEncoding.Option.fromId(value).id
+        _lyricsTextEncoding.value = normalized
+        prefs.edit { putString(KEY_LYRICS_TEXT_ENCODING, normalized) }
     }
 
     fun exportLyricsPreferencesToCsv(context: Context, uri: Uri): Boolean {

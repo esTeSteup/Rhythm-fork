@@ -3201,4 +3201,12 @@
 
     <string name="settings_player_haptics">播放器震动</string>
     <string name="settings_player_haptics_desc">播放控制、拖动进度条时震动（默认关闭）</string>
+
+    <string name="lyrics_text_encoding">歌词文字编码</string>
+    <string name="lyrics_text_encoding_desc">本地 .lrc/.txt 歌词文件的解码方式（默认自动检测）</string>
+    <string name="lyrics_encoding_sheet_subtitle">选择本地歌词文件的解码方式</string>
+    <string name="lyrics_encoding_auto">自动检测</string>
+    <string name="lyrics_encoding_auto_desc">自动识别 UTF-8、UTF-16、GBK/GB18030、Big5、Shift-JIS、EUC-KR 等编码</string>
+    <string name="lyrics_encoding_force_desc">始终使用 %1$s 解码</string>
+    <string name="lyrics_encoding_reload_hint">修改后请重新打开歌曲或重新加载歌词以生效。</string>
 </resources>

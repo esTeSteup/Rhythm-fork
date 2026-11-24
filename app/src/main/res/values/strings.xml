@@ -2643,6 +2643,13 @@
     <string name="lyrics_import_preferences">Import Lyrics Preferences</string>
     <string name="lyrics_import_preferences_desc">Restore song-specific source settings and custom tags from CSV</string>
     <string name="lyrics_file_data_management">Lyrics File &amp; Data Management</string>
+    <string name="lyrics_text_encoding">Lyrics Text Encoding</string>
+    <string name="lyrics_text_encoding_desc">Decoding used for local .lrc/.txt lyrics files (auto-detect by default)</string>
+    <string name="lyrics_encoding_sheet_subtitle">Choose how local lyrics files are decoded</string>
+    <string name="lyrics_encoding_auto">Auto-detect</string>
+    <string name="lyrics_encoding_auto_desc">Automatically detect UTF-8, UTF-16, GBK/GB18030, Big5, Shift-JIS or EUC-KR</string>
+    <string name="lyrics_encoding_force_desc">Always decode with %1$s</string>
+    <string name="lyrics_encoding_reload_hint">Re-open the song or refresh its lyrics after changing this setting.</string>
     <string name="lyrics_size_min" formatted="false">50%</string>
     <string name="lyrics_size_max" formatted="false">200%</string>
     <string name="notifications_sleep_timer_status">Sleep Timer Status</string>

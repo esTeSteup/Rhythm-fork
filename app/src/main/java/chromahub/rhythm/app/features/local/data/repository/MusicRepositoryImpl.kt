@@ -89,6 +89,7 @@ import chromahub.rhythm.app.core.domain.model.SourceType
 import chromahub.rhythm.app.infrastructure.provider.RhythmAlbumArtProvider
 import java.lang.ref.WeakReference
 import chromahub.rhythm.app.util.AudioFormatDetector
+import chromahub.rhythm.app.util.LyricsEncoding
 import chromahub.rhythm.app.util.LyricsParser
 import chromahub.rhythm.app.util.EnhancedLyricLine
 import chromahub.rhythm.app.util.EnhancedWord
@@ -4043,7 +4044,13 @@ class MusicRepository(context: Context) {
     /**
      * Parses lyrics text into LyricsData with proper format detection and cleaning
      */
-    private fun parseLyricsData(lyrics: String): LyricsData? {
+    private fun parseLyricsData(rawLyrics: String): LyricsData? {
+        // Some tags store legacy/UTF-8 bytes that were read as ISO-8859-1, producing mojibake.
+        val repaired = LyricsEncoding.repairMojibake(rawLyrics)
+        if (repaired != rawLyrics) {
+            Log.d(TAG, "Repaired mojibake in embedded lyrics")
+        }
+        val lyrics = repaired
         if (lyrics.isBlank()) {
             return null
         }
@@ -4625,11 +4632,13 @@ class MusicRepository(context: Context) {
         if (artist.isBlank() || title.isBlank())
             return@withContext LyricsData("No lyrics available for this song", null, null)
 
-        // Use song ID in cache key if available to prevent wrong lyrics for songs with similar metadata
+        // Use song ID in cache key if available to prevent wrong lyrics for songs with similar
+        // metadata. The text encoding is part of the key so changing it re-reads local files.
+        val encodingKey = AppSettings.getInstance(context).lyricsTextEncoding.value.lowercase()
         val cacheKey = if (songId != null) {
-            "$songId:$artist:$title".lowercase()
+            "$songId:$artist:$title:$encodingKey".lowercase()
         } else {
-            "$artist:$title".lowercase()
+            "$artist:$title:$encodingKey".lowercase()
         }
         
         Log.d(TAG, "===== Cache key: $cacheKey, Cache size: ${lyricsCache.size} =====")
@@ -5167,6 +5176,14 @@ class MusicRepository(context: Context) {
     }
     
     /**
+     * Reads a local lyrics file using encoding detection (or the user's manual override).
+     */
+    private fun readLyricsFileText(file: File): String {
+        val encoding = AppSettings.getInstance(context).lyricsTextEncoding.value
+        return LyricsEncoding.decode(file.readBytes(), encoding)
+    }
+
+    /**
      * Searches for .lrc/.ttml/.srt file next to the music file
      * Looks for files with same name as the song or generic patterns
      */
@@ -5246,7 +5263,7 @@ class MusicRepository(context: Context) {
                         val lyricFile = File(directory, customLrcName)
                         if (lyricFile.exists() && lyricFile.canRead()) {
                             val ext = lyricFile.extension.lowercase()
-                            val content = lyricFile.readText()
+                            val content = readLyricsFileText(lyricFile)
                             val parsed = parseLocalLyricsFile(content, ext)
                             if (parsed != null) return parsed
                         }
@@ -5256,7 +5273,7 @@ class MusicRepository(context: Context) {
                     for (ext in extensions) {
                         val lyricFile = File(directory, "$songNameWithoutExt.$ext")
                         if (lyricFile.exists() && lyricFile.canRead()) {
-                            val content = lyricFile.readText()
+                            val content = readLyricsFileText(lyricFile)
                             val parsed = parseLocalLyricsFile(content, ext)
                             if (parsed != null) return parsed
                         }
@@ -5277,7 +5294,7 @@ class MusicRepository(context: Context) {
                         for (ext in extensions) {
                             val lyricFile = File(directory, "$candidate.$ext")
                             if (lyricFile.exists() && lyricFile.canRead()) {
-                                val content = lyricFile.readText()
+                                val content = readLyricsFileText(lyricFile)
                                 val parsed = parseLocalLyricsFile(content, ext)
                                 if (parsed != null) return parsed
                             }

@@ -9,6 +9,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
+import chromahub.rhythm.app.shared.data.model.AppSettings
 import java.io.ByteArrayOutputStream
 
 object LyricsFileUtils {
@@ -65,11 +66,16 @@ object LyricsFileUtils {
                 return LoadResult(errorMessage = "The selected file is empty")
             }
 
-            if (isLikelyBinaryContent(bytes)) {
+            // UTF-16 files legitimately contain NUL bytes, so only run the binary check when
+            // there is no UTF-16 byte-order mark.
+            if (!hasUtf16Bom(bytes) && isLikelyBinaryContent(bytes)) {
                 return LoadResult(errorMessage = "Selected file is not a valid text lyrics file")
             }
 
-            val text = decodeLyricsText(bytes)
+            val text = LyricsEncoding.decode(
+                bytes,
+                AppSettings.getInstance(context).lyricsTextEncoding.value
+            )
                 .replace("\uFEFF", "")
                 .replace("\r\n", "\n")
                 .replace("\r", "\n")
@@ -112,33 +118,11 @@ object LyricsFileUtils {
         return mimeType.startsWith("text/") || mimeType == "application/octet-stream"
     }
 
-    private fun decodeLyricsText(bytes: ByteArray): String {
-        if (bytes.size >= 2) {
-            val b0 = bytes[0]
-            val b1 = bytes[1]
-            if (b0 == 0xFF.toByte() && b1 == 0xFE.toByte()) {
-                return String(bytes, Charsets.UTF_16LE)
-            }
-            if (b0 == 0xFE.toByte() && b1 == 0xFF.toByte()) {
-                return String(bytes, Charsets.UTF_16BE)
-            }
-        }
-
-        if (bytes.size >= 3) {
-            if (bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte()) {
-                return String(bytes, Charsets.UTF_8)
-            }
-        }
-
-        val utf8Text = String(bytes, Charsets.UTF_8)
-        val replacementChars = utf8Text.count { it == '\uFFFD' }
-
-        return if (replacementChars > utf8Text.length / 20) {
-            String(bytes, Charsets.ISO_8859_1)
-        } else {
-            utf8Text
-        }
-    }
+    private fun hasUtf16Bom(bytes: ByteArray): Boolean =
+        bytes.size >= 2 && (
+            (bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte()) ||
+                (bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte())
+            )
 
     private fun isLikelyBinaryContent(bytes: ByteArray): Boolean {
         if (bytes.any { it == 0.toByte() }) {
