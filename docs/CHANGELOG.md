@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Audio Buffer Pooling & Track Transitions**: Refactored internal audio buffer pooling and logging to resolve ExoPlayer reallocation memory leaks and crashes during rapid track changes ([#686](https://github.com/cromaguy/Rhythm/issues/686), [#697](https://github.com/cromaguy/Rhythm/pull/697)).
 - **Eliminated Transition Stutter & ANRs**: Removed main-thread lock contention when collecting playback stats on track transitions, eliminating UI freezes and ANR errors ([#701](https://github.com/cromaguy/Rhythm/issues/701)).
 - **Debounced MediaStore Observer**: Debounced system media observer events behind a staleness check to prevent scanning storms during large file transfers ([#646](https://github.com/cromaguy/Rhythm/issues/646)).
+## [5.5.501.1308 Beta] - 2026-11-26
+
+### Fixed
+- **Song Options Sheet Pull-Down**: Once the action list reaches its top, pulling down further now pulls the whole sheet down again (and can dismiss it); list scrolling and leftover fling momentum still cannot drag or jitter the sheet.
 
 ## [5.5.501.1307 Beta] - 2026-11-25
 
