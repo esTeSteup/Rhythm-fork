@@ -1,0 +1,10 @@
+Rhythm v5.6 - Update
+
+• Synced with upstream 5.6.506.1360
+• ViPER4Android DSP, new miniplayer, Rhythm Go server downloads
+• Player haptics toggle
+• Lyrics text encoding detection and manual override
+• Backup section picker and playlist song menu fixes
+• Song options sheet pull-down restored
+
+Thanks for using Rhythm ;)

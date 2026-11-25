@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - 
 
+## [5.6.506.1361 Beta] - 2026-11-26
+
+### Changed
+- **Upstream Sync**: Rebased this fork onto upstream `5.6.506.1360` (ViPER4Android DSP engine, revamped miniplayer, Rhythm Go server downloads, and the 5.6 fixes) while retaining the local feature set.
+
+### Fixed
+- **Local Features Retained**: Player haptics toggle, lyrics text encoding detection with manual override, backup section picker buttons, playlist song menu actions, and song options sheet pull-down all remain available on the new upstream base.
+
 ## [5.6.506.1360] - 2026-11-24
 
 ### Added
