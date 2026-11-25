@@ -62,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Backup Section Picker**: The Cancel/Export buttons are now always visible when choosing which sections to back up or restore; previously the list could consume the whole sheet and hide them.
 - **Playlist Song Options**: "Add to playlist" and "Like" now work from the song menu on playlist detail pages instead of silently closing the sheet.
-- **Song Options Sheet Jitter**: Scrolling the action list no longer drags or bounces the bottom sheet; the sheet stays still while scrolling and leaves a safe margin below the status bar.
+- **Song Options Sheet Jitter**: Scrolling the action list no longer drags or bounces the bottom sheet; when the list reaches its top, pulling down further still pulls the sheet down normally. The sheet also keeps a safe margin below the status bar.
 - **Lyrics Encoding Detection**: Local lyrics files encoded with GBK/GB18030, Big5, Shift-JIS or EUC-KR are now detected automatically instead of being decoded as broken UTF-8; embedded tag lyrics stored with the wrong single-byte charset are repaired automatically.
 - **UTF-16 Lyrics Import**: UTF-16 lyrics files are no longer rejected as binary content when imported.
 

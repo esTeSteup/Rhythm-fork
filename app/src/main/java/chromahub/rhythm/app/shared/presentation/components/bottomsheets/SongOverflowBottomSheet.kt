@@ -302,20 +302,31 @@ fun SongOverflowBottomSheet(
 
     val scrollState = rememberScrollState()
 
-    // Keeps the sheet stationary while the action list itself is being scrolled. Without this,
-    // leftover scroll deltas/velocity are forwarded to the modal sheet, so swiping the list down
-    // (e.g. when it is already at the top) drags the whole sheet and makes it bounce/jitter.
-    // Dragging the sheet by its header/drag handle still works.
-    val sheetScrollGuard = remember {
+    // Bridges the action list and the modal sheet. When the list reaches its top and the user
+    // keeps pulling down, the leftover drag is handed to the sheet so it can be pulled down and
+    // dismissed (normal bottom sheet behaviour). Leftover fling velocity from scrolling the list
+    // is dropped instead, so momentum cannot unexpectedly collapse or jitter the sheet; only a
+    // direct pull that actually moved the sheet is allowed to settle it.
+    val sheetScrollBridge = remember {
         object : NestedScrollConnection {
+            private var draggedSheet = false
+
             override fun onPostScroll(
                 consumed: Offset,
                 available: Offset,
                 source: NestedScrollSource
-            ): Offset = available
+            ): Offset {
+                if (source == NestedScrollSource.UserInput && available.y > 0f) {
+                    draggedSheet = true
+                }
+                return Offset.Zero
+            }
 
-            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
-                available
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                val wasDragged = draggedSheet
+                draggedSheet = false
+                return if (wasDragged) Velocity.Zero else available
+            }
         }
     }
 
@@ -496,7 +507,7 @@ fun SongOverflowBottomSheet(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .nestedScroll(sheetScrollGuard)
+                        .nestedScroll(sheetScrollBridge)
                         .verticalScroll(scrollState, overscrollEffect = null)
                         .padding(start = 24.dp, end = 24.dp + endPadding, top = 4.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)

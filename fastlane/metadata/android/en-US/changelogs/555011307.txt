@@ -2,7 +2,7 @@ Rhythm v5.5 - Update
 
 • Fixed missing Cancel/Export buttons when choosing backup sections
 • Fixed "Add to playlist" and "Like" in the playlist song menu
-• Song options sheet no longer jitters while scrolling
+• Song options sheet no longer jitters while scrolling; pull down at the list top still closes it
 • Auto-detect GBK/GB18030, Big5, Shift-JIS and EUC-KR lyrics files
 • New Lyrics Text Encoding override in Lyrics settings
 • Repaired mojibake in embedded lyrics
