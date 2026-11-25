@@ -138,14 +138,6 @@ fun UniversalSearchScreen(
     val appMode by appSettings.appMode.collectAsState()
     val showKeyboardOnSearchOpen by appSettings.showKeyboardOnSearchOpen.collectAsState()
 
-    // Only search the streaming provider when one is actually connected. Otherwise
-    // StreamingMusicViewModel.search() fails its auth check and shows a toast on
-    // every query change while the user is only searching local music.
-    val streamingSessions by streamingViewModel.serviceSessions.collectAsState()
-    val activeStreamingService by appSettings.streamingService.collectAsState()
-    val hasConnectedStreamingService =
-        streamingSessions[activeStreamingService]?.isConnected == true
-
     DisposableEffect(context) {
         val activity = context as? android.app.Activity
         val originalMode = activity?.window?.attributes?.softInputMode
@@ -255,6 +247,12 @@ fun UniversalSearchScreen(
     val favoriteSongs by localViewModel.favoriteSongs.collectAsState()
 
     val streamingSessions by streamingViewModel.serviceSessions.collectAsState()
+    val activeStreamingService by appSettings.streamingService.collectAsState()
+    // Only search the streaming provider when one is actually connected. Otherwise
+    // StreamingMusicViewModel.search() fails its auth check and shows a toast on
+    // every query change while the user is only searching local music.
+    val hasConnectedStreamingService =
+        streamingSessions[activeStreamingService]?.isConnected == true
     val isGoModeConfigured = remember(streamingSessions) { streamingViewModel.isConfigured() }
     val isGoModeActive = appMode == "STREAMING" && isGoModeConfigured
 
